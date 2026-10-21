@@ -1,58 +1,35 @@
 // * Audio Mute
 let isMute = false;
+let currentSpeechText = "";
 
 // * Current Date
 let cd = new Date();
-var currentDateGlobal = `${cd.getDate()} - ${
-  cd.getMonth() + 1
-} - ${cd.getFullYear()}`;
-console.log(currentDateGlobal);
-
+var currentDateGlobal = `${cd.getDate()} - ${cd.getMonth() + 1} - ${cd.getFullYear()}`;
 // * Quiz object
 const Quiz = {
   quizData: [
     {
-      question:
-        "Which of the following machine is used to measure compressive strength?",
-      a: "Universal testing machine",
-      b: "Impact testing machine",
-      c: "Fatigue testing machine",
-      d: "Erichsen machine",
-      correct: "a",
-    },
-    {
-      question:
-        "Which one of the following, is not a unit of ultimate tensile strength?",
-      a: "MPa",
-      b: "N/m2",
-      c: "Kg/m3",
-      d: "PSI",
-      correct: "c",
-    },
-    {
-      question: "The extensometer can be attached anywhere to the specimen _",
-      a: "Yes",
-      b: "No",
-      c: "No but sometime yes",
-      d: "None of the above",
+      question: "What is a common defect in concrete surfaces due to improper formwork alignment?",
+      a: "Honeycombing",
+      b: "Bulging of concrete",
+      c: "Smooth finish",
+      d: "Increased durability ",
       correct: "b",
     },
-
     {
-      question:
-        "What is the smallest measurement that is possible by vernier calliper?",
-      a: "Least count",
-      b: "Actual reading",
-      c: "Main scale division",
-      d: "Vernier scale division",
-      correct: "a",
+      question: "Which material is commonly used for form ties in formwork systems?",
+      a: "Aluminum",
+      b: "Steel",
+      c: "Plywood",
+      d: "Plastic ",
+      correct: "b",
     },
     {
-      question: "What is the least count of a standard metric vernier caliper",
-      a: "0.002mm",
-      b: "0.02mm",
-      c: "0.1mm",
-      d: "0.2mm",
+      question: "What is the main advantage of using plastic formwork in construction?",
+      a: "High thermal resistance",
+      b: "Lightweight and easy to handle",
+      c: "High reuse value",
+      d: "High strength",
       correct: "b",
     },
   ],
@@ -69,14 +46,19 @@ const Quiz = {
   loadQuizCallCount: 0,
   currentQuiz: 0,
   score: 0,
+  completedSteps: [],
+  currentStepId: null,
   loadQuiz() {
-
-    
+    const stepId = Scenes.currentStep;
+    if (this.completedSteps.includes(stepId)) {
+      return;
+    }
+    this.currentStepId = stepId;
     if (this.currentQuiz >= this.quizData.length) {
       return;
     }
     document.querySelector(".transparent-box").style.display = "block";
-    this.loadQuizCallCount++;
+    this.loadQuizCallCount = this.currentQuiz + 1;
     window.speechSynthesis.cancel();
     setCC("Choose the correct answer.");
     this.deselectAnswers();
@@ -96,15 +78,13 @@ const Quiz = {
       if (answerEl.checked) {
         answer = answerEl.id;
       }
-
     });
     this.answerEls.forEach((answerEl) => {
       if (answer != undefined) {
         answerEl.disabled = true;
       }
-
     });
-    
+
     return answer;
   },
 
@@ -124,17 +104,14 @@ const Quiz = {
     // this.ansDom.style.display = "none";
   },
   init() {
-    let okBtn = document.getElementById("quizSubmit") ;
+    let okBtn = document.getElementById("quizSubmit");
     okBtn.textContent = "Submit";
     // onclick for quiz close btn
     // document.querySelector("#closeQuiz").onclick = () => {
     //   this.close();
     // };
     // onclick for quiz submit btn
-    document.getElementById("quizSubmit").onclick = ()=> {
-
-
-      
+    document.getElementById("quizSubmit").onclick = () => {
       // for disable multiple submit
       if (this.loadQuizCallCount - 1 !== this.currentQuiz) {
         return;
@@ -166,9 +143,13 @@ const Quiz = {
 
         okBtn.textContent = "Ok";
         okBtn.onclick = function(){
+          if (Quiz.currentStepId !== null) {
+            Quiz.completedSteps.push(Quiz.currentStepId);
+            Quiz.currentStepId = null;
+          }
           Quiz.close();
           Quiz.init();
-        }                                                                                                                      
+        }
 
         // to stop the next question
         // if (this.currentQuiz < this.quizData.length) {
@@ -181,9 +162,9 @@ const Quiz = {
         // }
       }
       // this.close();
-    }
+    };
   },
-}
+};
 
 // * ChartJs
 const ChartGraph = {
@@ -211,7 +192,7 @@ const ChartGraph = {
   delete: function () {
     this.ctxBox.style.display = "none";
     this.currGr.destroy();
-   },
+  },
   view: function (num, left, top, height = null, width = null) {
     if (height != null) this.ctxBox.style.height = height + "px!important";
     if (width != null) this.ctxBox.style.width = width + "px!important";
@@ -236,7 +217,7 @@ const ChartGraph = {
           // },
         ],
       },
-      options: { 
+      options: {
         borderWidth: 3,
         scales: {
           y: {
@@ -247,7 +228,7 @@ const ChartGraph = {
     });
     return this;
   },
-}
+};
 
 Quiz.init();
 
@@ -257,10 +238,31 @@ let isPerformNext = false;
 // animation is running
 let isRunning = false;
 // to set isProcessRunning and also sync the progressbar + drawer
+// ! and toggle the next btn active / deactive
+function toggleNextBtn() {
+  let nextBtn = document.querySelector(".btn-next");
+  nextBtn.classList.toggle("btn-deactive");
+}
 const setIsProcessRunning = (value) => {
+  // calling toggle the next
+  if (value != isRunning) {
+    toggleNextBtn();
+  }
+  // the step is ended
+  if (!value) {
+    // reset showArrowMenuItemNumber
+    Scenes.menuItemNumber = 1;
+    setCC("Click 'Next' to go to next step");
+    get(".blinkArrow").classList.add("bright");
+    Dom.setBlinkArrow(true, 790, 415).play();
+    // Scenes.activeAllMenuItems();
+  }
   isRunning = value;
-  if(value){
-    Dom.hideAll()
+  if (value) {
+    Dom.hideAll();
+    get(".blinkArrow").classList.remove("bright");
+    window.speechSynthesis.cancel();
+    if (ccQueue) ccQueue = [];
   }
 };
 
@@ -311,16 +313,17 @@ let student_name = "";
 
 // ! text to audio
 
-const 
-
-
-textToSpeach = (text) => {
-  // if(isMute){
-  //   return;
-  // }
+const textToSpeach = (text) => {
   let utterance = new SpeechSynthesisUtterance();
   utterance.text = text;
   utterance.voice = window.speechSynthesis.getVoices()[0];
+  if (isMute) {
+    utterance.rate = 10;
+    utterance.volume = 0;
+  } else {
+    // Sync speech rate with animation speed (1x = 1 rate, up to 2x)
+    utterance.rate = Math.min(2, anime.speed || 1);
+  }
   window.speechSynthesis.speak(utterance);
   return utterance;
 };
@@ -330,17 +333,23 @@ let ccQueue = [];
 // for subtitile
 let ccObj = null;
 function setCC(text = null, speed = null) {
+  currentSpeechText = text;
   if (ccObj != null) {
     ccObj.destroy();
+    ccObj = null;
   }
   
   let ccDom = get(".steps-subtitle .subtitle");
+  if (!text || text.trim() === "") {
+    ccDom.innerHTML = "";
+    ccQueue = [];
+    return ccDom;
+  }
   ccQueue.push(text);
   ccObj = new Typed(ccDom, {
     strings: ["", ...ccQueue],
-    typeSpeed: 25,
+    typeSpeed: 25 / (anime.speed || 1),
     onStringTyped(){
-      console.log(ccQueue);
       ccQueue.shift();
       // if(ccQueue.length != 0){
       //   setCC(ccQueue.shift())
@@ -350,7 +359,7 @@ function setCC(text = null, speed = null) {
   if (!isMute) textToSpeach(text);
   return ccDom;
 }
-   
+
 class Dom {
   constructor(selector) {
     this.item = null;
@@ -359,14 +368,12 @@ class Dom {
     } else {
       this.item = src.get(selector);
     }
-    this.selector = selector
+    this.selector = selector;
     // push
   }
-  hidden(isHidden){
-    if(isHidden == false)
-      this.item.style.visibility = "visible"
-    else
-      this.item.style.visibility = "hidden"
+  hidden(isHidden) {
+    if (isHidden == false) this.item.style.visibility = "visible";
+    else this.item.style.visibility = "hidden";
   }
   setContent(text) {
     this.item.innerHTML = text;
@@ -391,35 +398,25 @@ class Dom {
   get() {
     return this.item;
   }
-  set(
-    left = null,
-    top = null,
-    height = null,
-    width = null,
-    bottom = null,
-    right = null,
-    disp = "block"
-  ) {
+  set(left = null, top = null, height = null, width = null, bottom = null, right = null, disp = "block") {
     //! push for every element
-    this.push()
+    this.push();
 
     // coordinates
-    this.left = left
-    this.top = top
-    this.bottom = bottom
-    this.right = right
-    this.height = height
-    this.width = width
-    this.item.style.opacity = 1
-    this.item.style.transform = "translateX(0) translateY(0)"
+    this.left = left;
+    this.top = top;
+    this.bottom = bottom;
+    this.right = right;
+    this.height = height;
+    this.width = width;
+    this.item.style.opacity = 1;
+    this.item.style.transform = "translateX(0) translateY(0)";
 
     if (this.left !== null) this.item.style.left = String(this.left) + "px";
     if (this.top !== null) this.item.style.top = String(this.top) + "px";
-    if (this.bottom !== null)
-      this.item.style.bottom = String(this.bottom) + "px";
+    if (this.bottom !== null) this.item.style.bottom = String(this.bottom) + "px";
     if (this.right !== null) this.item.style.right = String(this.right) + "px";
-    if (this.height !== null)
-      this.item.style.height = String(this.height) + "px";
+    if (this.height !== null) this.item.style.height = String(this.height) + "px";
     if (this.width !== null) this.item.style.width = String(this.width) + "px";
     this.show(disp);
     return this;
@@ -441,17 +438,24 @@ class Dom {
   // * static elements/objects of anime
   static arrayOfAnimes = [];
   static arrayOfItems = [];
-  static animePush(animeObj){
+  static animePush(animeObj) {
     Dom.arrayOfAnimes.push(animeObj);
   }
-  static resetAnimeItems(){
+  static resetAnimeItems() {
     Dom.arrayOfAnimes = [];
   }
   static hideAll() {
     //to empty the setCC
     setCC("");
+    if (typeof Scenes !== "undefined" && Scenes.intru) {
+      Scenes.intru.destroy();
+      Scenes.intru = null;
+    }
+
     // to delete all content of content adder menu
-    Scenes.items.contentAdderBox.setContent("");
+    if (typeof Scenes !== "undefined") {
+      Scenes.items.contentAdderBox.setContent("");
+    }
     for (let i of Dom.arrayOfItems) {
       i.hide();
       i.opacity();
@@ -466,18 +470,8 @@ class Dom {
   static resetItems() {
     Dom.arrayOfItems = [];
   }
-  static setBlinkArrow(
-    isX = true,
-    left = null,
-    top = null,
-    height = 60,
-    width = null,
-    rotate = 0
-  ) {
-    let blinkArrow = new Dom("blinkArrow")
-      .set(left, top, height, width)
-      .rotate(rotate)
-      .zIndex(200);
+  static setBlinkArrow(isX = true, left = null, top = null, height = 60, width = null, rotate = 0) {
+    let blinkArrow = new Dom("blinkArrow").set(left, top, height, width).rotate(rotate).zIndex(200);
     if (isX === -1) {
       blinkArrow.hide();
       return;
@@ -500,12 +494,12 @@ class Dom {
       autoplay: false,
       duration: 300,
     });
+    Dom.animePush(blink);
 
     return blink;
   }
   push() {
-    if(this.selector != ".anime-header")
-      Dom.arrayOfItems.push(this);
+    if (this.selector != ".anime-header") Dom.arrayOfItems.push(this);
     return this;
   }
 }
@@ -705,127 +699,123 @@ const Scenes = {
     contentAdderBox: new Dom(".content-adder-box"),
     btn_save: new Dom(".btn-save"),
     btn_next: new Dom(".btn-next"),
-    
 
-left_aluminium1 : new Dom("left_aluminium1"),
-left_aluminium2 : new Dom("left_aluminium2"),
-left_base_plate1 : new Dom("left_base_plate1"),
-left_base_plate2 : new Dom("left_base_plate2"), 
-left_base_plate3 : new Dom("left_base_plate3"),
-left_base_plate4 : new Dom("left_base_plate4"),
-left_beam1 : new Dom("left_beam1"),
-left_beam1_left : new Dom("left_beam1_left"),
-left_beam1_right : new Dom("left_beam1_right"),
-left_beam2 : new Dom("left_beam2"),
-left_beam2_left : new Dom("left_beam2_left"),
-left_beam2_right : new Dom("left_beam2_right"),
-left_beam3 : new Dom("left_beam3"),
-left_beam4 : new Dom("left_beam4"),
-left_beam5 : new Dom("left_beam5"),
-left_beam6 : new Dom("left_beam6"),
-left_bfs1_left : new Dom("left_bfs1_left"),
-left_bfs1_right : new Dom("left_bfs1_right"),
-left_bfs2_left : new Dom("left_bfs2_left"),
-left_bfs2_right : new Dom("left_bfs2_right"),
-left_bfs3_left : new Dom("left_bfs3_left"),
-left_bfs3_right : new Dom("left_bfs3_right"),
-left_ct_prop1 : new Dom("left_ct_prop1"),
-left_ct_prop2 : new Dom("left_ct_prop2"),
-left_ct_prop3 : new Dom("left_ct_prop3"),
-left_ct_prop4 : new Dom("left_ct_prop4"),
-left_sheathing1 : new Dom("left_sheathing1"),
-left_sheathing_left : new Dom("left_sheathing_left"),
-left_sheathing_right : new Dom("left_sheathing_right"),
-left_uhead1 : new Dom("left_uhead1"),
-left_uhead2 : new Dom("left_uhead2"),
-left_uhead3 : new Dom("left_uhead3"),
-left_uhead4 : new Dom("left_uhead4"),
-right_aluminium1 : new Dom("right_aluminium1"),
-right_aluminium2 : new Dom("right_aluminium2"),
-right_base_plate1 : new Dom("right_base_plate1"),
-right_base_plate2 : new Dom("right_base_plate2"),
-right_base_plate3 : new Dom("right_base_plate3"),
-right_base_plate4 : new Dom("right_base_plate4"),
-right_beam1 : new Dom("right_beam1"),
-right_beam2 : new Dom("right_beam2"),
-right_beam3 : new Dom("right_beam3"),
-right_beam4 : new Dom("right_beam4"),
-right_beam5 : new Dom("right_beam5"),
-right_beam6 : new Dom("right_beam6"),
-right_beam1_left : new Dom("right_beam_left1"),
-right_beam2_left : new Dom("right_beam_left2"),
-right_beam1_right : new Dom("right_beam_right1"),
-right_beam2_right : new Dom("right_beam_right2"),
-right_bfs1_left : new Dom("right_bfs_left1"),
-right_bfs2_left : new Dom("right_bfs_left2"),
-right_bfs3_left : new Dom("right_bfs_left3"),
-right_bfs1_right : new Dom("right_bfs_right1"),
-right_bfs2_right : new Dom("right_bfs_right2"),
-right_bfs3_right : new Dom("right_bfs_right3"),
-right_ct_prop1 : new Dom("right_ct_prop1"),
-right_ct_prop2 : new Dom("right_ct_prop2"),
-right_ct_prop3 : new Dom("right_ct_prop3"),
-right_ct_prop4 : new Dom("right_ct_prop4"),
-right_sheathing1 : new Dom("right_sheathing1"),
-right_sheathing_left : new Dom("right_sheathing_left"),
-right_sheathing_right : new Dom("right_sheathing_right"),
-right_uhead1 : new Dom("right_u_head1"),
-right_uhead2 : new Dom("right_u_head2"),
-right_uhead3 : new Dom("right_u_head3"),
-right_uhead4 : new Dom("right_u_head4"),
-slab_aluminium1 : new Dom("slab_aluminium1"),
-slab_aluminium2 : new Dom("slab_aluminium2"),
-slab_beam1 : new Dom("slab_beam1"),
-slab_beam2 : new Dom("slab_beam2"),
-slab_beam3 : new Dom("slab_beam3"),
-slab_beam4 : new Dom("slab_beam4"),
-slab_beam5 : new Dom("slab_beam5"),
-slab_short_prop1 : new Dom("slab_ct_prop1"),
-slab_short_prop2 : new Dom("slab_ct_prop2"),
-slab_short_prop3 : new Dom("slab_ct_prop3"),
-slab_short_prop4 : new Dom("slab_ct_prop4"),
-slab_sheathing1 : new Dom("slab_sheathing1"),
-slab_uhead1 : new Dom("slab_uhead1"),
-slab_uhead2 : new Dom("slab_uhead2"),
-slab_uhead3 : new Dom("slab_uhead3"),
-slab_uhead4 : new Dom("slab_uhead4"),
-slab_u_head1 : new Dom("slab_u_head1"),
-left_sheathing1_nail1 : new Dom("left_sheathing1_nail1"),
-left_sheathing1_nail2 : new Dom("left_sheathing1_nail2"),
-left_sheathing1_nail3 : new Dom("left_sheathing1_nail3"),
-left_sheathing1_nail4 : new Dom("left_sheathing1_nail4"),
-left_sheathing1_nail_helper : new Dom("left_sheathing1_nail_helper"),
-right_sheathing1_nail1 : new Dom("right_sheathing1_nail1"),
-right_sheathing1_nail2 : new Dom("right_sheathing1_nail2"),
-right_sheathing1_nail3 : new Dom("right_sheathing1_nail3"),
-right_sheathing1_nail4 : new Dom("right_sheathing1_nail4"),
-right_sheathing1_nail_helper : new Dom("right_sheathing1_nail_helper"),
-hammer : new Dom("hammer"),
-bfs_video : new Dom("bfs_video"),
-objective : new Dom("objective"),
-left_bracing1 : new Dom("left_bracing1"),
-left_bracing10 : new Dom("left_bracing10"),
-left_bracing2 : new Dom("left_bracing2"),
-left_bracing3 : new Dom("left_bracing3"),
-left_bracing4 : new Dom("left_bracing4"),
-left_bracing5 : new Dom("left_bracing5"),
-left_bracing6 : new Dom("left_bracing6"),
-left_bracing7 : new Dom("left_bracing7"),
-left_bracing8 : new Dom("left_bracing8"),
-left_bracing9 : new Dom("left_bracing9"),
-right_bracing1 : new Dom("right_bracing1"),
-right_bracing10 : new Dom("right_bracing10"),
-right_bracing2 : new Dom("right_bracing2"),
-right_bracing3 : new Dom("right_bracing3"),
-right_bracing4 : new Dom("right_bracing4"),
-right_bracing5 : new Dom("right_bracing5"),
-right_bracing6 : new Dom("right_bracing6"),
-right_bracing7 : new Dom("right_bracing7"),
-right_bracing8 : new Dom("right_bracing8"),
-right_bracing9 : new Dom("right_bracing9"),
-
-
-
+    left_aluminium1: new Dom("left_aluminium1"),
+    left_aluminium2: new Dom("left_aluminium2"),
+    left_base_plate1: new Dom("left_base_plate1"),
+    left_base_plate2: new Dom("left_base_plate2"),
+    left_base_plate3: new Dom("left_base_plate3"),
+    left_base_plate4: new Dom("left_base_plate4"),
+    left_beam1: new Dom("left_beam1"),
+    left_beam1_left: new Dom("left_beam1_left"),
+    left_beam1_right: new Dom("left_beam1_right"),
+    left_beam2: new Dom("left_beam2"),
+    left_beam2_left: new Dom("left_beam2_left"),
+    left_beam2_right: new Dom("left_beam2_right"),
+    left_beam3: new Dom("left_beam3"),
+    left_beam4: new Dom("left_beam4"),
+    left_beam5: new Dom("left_beam5"),
+    left_beam6: new Dom("left_beam6"),
+    left_bfs1_left: new Dom("left_bfs1_left"),
+    left_bfs1_right: new Dom("left_bfs1_right"),
+    left_bfs2_left: new Dom("left_bfs2_left"),
+    left_bfs2_right: new Dom("left_bfs2_right"),
+    left_bfs3_left: new Dom("left_bfs3_left"),
+    left_bfs3_right: new Dom("left_bfs3_right"),
+    left_ct_prop1: new Dom("left_ct_prop1"),
+    left_ct_prop2: new Dom("left_ct_prop2"),
+    left_ct_prop3: new Dom("left_ct_prop3"),
+    left_ct_prop4: new Dom("left_ct_prop4"),
+    left_sheathing1: new Dom("left_sheathing1"),
+    left_sheathing_left: new Dom("left_sheathing_left"),
+    left_sheathing_right: new Dom("left_sheathing_right"),
+    left_uhead1: new Dom("left_uhead1"),
+    left_uhead2: new Dom("left_uhead2"),
+    left_uhead3: new Dom("left_uhead3"),
+    left_uhead4: new Dom("left_uhead4"),
+    right_aluminium1: new Dom("right_aluminium1"),
+    right_aluminium2: new Dom("right_aluminium2"),
+    right_base_plate1: new Dom("right_base_plate1"),
+    right_base_plate2: new Dom("right_base_plate2"),
+    right_base_plate3: new Dom("right_base_plate3"),
+    right_base_plate4: new Dom("right_base_plate4"),
+    right_beam1: new Dom("right_beam1"),
+    right_beam2: new Dom("right_beam2"),
+    right_beam3: new Dom("right_beam3"),
+    right_beam4: new Dom("right_beam4"),
+    right_beam5: new Dom("right_beam5"),
+    right_beam6: new Dom("right_beam6"),
+    right_beam1_left: new Dom("right_beam_left1"),
+    right_beam2_left: new Dom("right_beam_left2"),
+    right_beam1_right: new Dom("right_beam_right1"),
+    right_beam2_right: new Dom("right_beam_right2"),
+    right_bfs1_left: new Dom("right_bfs_left1"),
+    right_bfs2_left: new Dom("right_bfs_left2"),
+    right_bfs3_left: new Dom("right_bfs_left3"),
+    right_bfs1_right: new Dom("right_bfs_right1"),
+    right_bfs2_right: new Dom("right_bfs_right2"),
+    right_bfs3_right: new Dom("right_bfs_right3"),
+    right_ct_prop1: new Dom("right_ct_prop1"),
+    right_ct_prop2: new Dom("right_ct_prop2"),
+    right_ct_prop3: new Dom("right_ct_prop3"),
+    right_ct_prop4: new Dom("right_ct_prop4"),
+    right_sheathing1: new Dom("right_sheathing1"),
+    right_sheathing_left: new Dom("right_sheathing_left"),
+    right_sheathing_right: new Dom("right_sheathing_right"),
+    right_uhead1: new Dom("right_u_head1"),
+    right_uhead2: new Dom("right_u_head2"),
+    right_uhead3: new Dom("right_u_head3"),
+    right_uhead4: new Dom("right_u_head4"),
+    slab_aluminium1: new Dom("slab_aluminium1"),
+    slab_aluminium2: new Dom("slab_aluminium2"),
+    slab_beam1: new Dom("slab_beam1"),
+    slab_beam2: new Dom("slab_beam2"),
+    slab_beam3: new Dom("slab_beam3"),
+    slab_beam4: new Dom("slab_beam4"),
+    slab_beam5: new Dom("slab_beam5"),
+    slab_short_prop1: new Dom("slab_ct_prop1"),
+    slab_short_prop2: new Dom("slab_ct_prop2"),
+    slab_short_prop3: new Dom("slab_ct_prop3"),
+    slab_short_prop4: new Dom("slab_ct_prop4"),
+    slab_sheathing1: new Dom("slab_sheathing1"),
+    slab_uhead1: new Dom("slab_uhead1"),
+    slab_uhead2: new Dom("slab_uhead2"),
+    slab_uhead3: new Dom("slab_uhead3"),
+    slab_uhead4: new Dom("slab_uhead4"),
+    slab_u_head1: new Dom("slab_u_head1"),
+    left_sheathing1_nail1: new Dom("left_sheathing1_nail1"),
+    left_sheathing1_nail2: new Dom("left_sheathing1_nail2"),
+    left_sheathing1_nail3: new Dom("left_sheathing1_nail3"),
+    left_sheathing1_nail4: new Dom("left_sheathing1_nail4"),
+    left_sheathing1_nail_helper: new Dom("left_sheathing1_nail_helper"),
+    right_sheathing1_nail1: new Dom("right_sheathing1_nail1"),
+    right_sheathing1_nail2: new Dom("right_sheathing1_nail2"),
+    right_sheathing1_nail3: new Dom("right_sheathing1_nail3"),
+    right_sheathing1_nail4: new Dom("right_sheathing1_nail4"),
+    right_sheathing1_nail_helper: new Dom("right_sheathing1_nail_helper"),
+    hammer: new Dom("hammer"),
+    bfs_video: new Dom("bfs_video"),
+    objective: new Dom("objective"),
+    left_bracing1: new Dom("left_bracing1"),
+    left_bracing10: new Dom("left_bracing10"),
+    left_bracing2: new Dom("left_bracing2"),
+    left_bracing3: new Dom("left_bracing3"),
+    left_bracing4: new Dom("left_bracing4"),
+    left_bracing5: new Dom("left_bracing5"),
+    left_bracing6: new Dom("left_bracing6"),
+    left_bracing7: new Dom("left_bracing7"),
+    left_bracing8: new Dom("left_bracing8"),
+    left_bracing9: new Dom("left_bracing9"),
+    right_bracing1: new Dom("right_bracing1"),
+    right_bracing10: new Dom("right_bracing10"),
+    right_bracing2: new Dom("right_bracing2"),
+    right_bracing3: new Dom("right_bracing3"),
+    right_bracing4: new Dom("right_bracing4"),
+    right_bracing5: new Dom("right_bracing5"),
+    right_bracing6: new Dom("right_bracing6"),
+    right_bracing7: new Dom("right_bracing7"),
+    right_bracing8: new Dom("right_bracing8"),
+    right_bracing9: new Dom("right_bracing9"),
   },
   deleteAll() {
     for (i in this.img) {
@@ -841,6 +831,43 @@ right_bracing9 : new Dom("right_bracing9"),
   // for content adder btn box
   contentAdderAddBtn(text) {
     Scenes.items.contentAdderBox.item.innerHTML += `<li class="btn content-adder">${text}</li>`;
+  },
+  // ! Show arrow according to menu item number
+  menuItemNumber: 1,
+  lockAllMenuItems() {
+    getAll(".content-adder-box li").forEach((item) => (item.style.pointerEvents = "none"));
+  },
+  showArrowForMenuItem() {
+    this.disableInvalidMenuItemsClick();
+
+    let menuLeftOffset = get(".content-adder-box").offsetLeft;
+    let gapArrowWith = 71;
+
+    this.leftGap = menuLeftOffset - gapArrowWith;
+
+    let initialFixedTop = -35;
+    let gapTopFixed = 50;
+    let finalTop = initialFixedTop;
+
+    for (let i = 1; i < this.menuItemNumber; i++) {
+      finalTop += gapTopFixed;
+    }
+
+    this.menuItemNumber++;
+    console.log();
+    Dom.setBlinkArrow(true, this.leftGap, finalTop).play();
+  },
+  // ! to disable menu item clicks
+  disableInvalidMenuItemsClick() {
+    let allMenuItems = getAll(".content-adder-box li");
+    allMenuItems.forEach((menuItem) => {
+      menuItem.style.pointerEvents = "none";
+    });
+
+    allMenuItems[this.menuItemNumber - 1].style.pointerEvents = "";
+  },
+  activeAllMenuItems() {
+    getAll(".content-adder-box li").forEach((item) => (item.style.pointerEvents = ""));
   },
   currentStep: 0,
   subCurrentStep: 0,
@@ -858,12 +885,18 @@ right_bracing9 : new Dom("right_bracing9"),
   // for typing hello text
   intru: null,
   intruVoice: null,
+  experimentNameIntro: "Beam and Slab Formwork Using HD Tower Experiment",
+  experimentNameCertificate: "Beam and Slab Formwork Using HD Tower",
+  experimentNameSpeech: "Beam and Slab Formwork Using HD Tower",
   steps: [
     (intro = () => {
       // remove all dom element for back and setProcessRunning
       setIsProcessRunning(true);
 
-
+      // ! set The experiment name
+      let welcomeBoxExpName = get(".welcome-box .title span:nth-child(2)");
+      welcomeBoxExpName.innerHTML = Scenes.experimentNameIntro;
+      new Dom(".anime-header p").item.style = `font-size: 26px;position: absolute;left: 62px;text-transform: uppercase;`
       // starting elements
 
       // subtitle
@@ -875,6 +908,7 @@ right_bracing9 : new Dom("right_bracing9"),
       show(inputWindow, "flex");
       let man = new Dom("man").set(650, 80).push();
 
+      new Dom(".user-input").push();
       let submitBtn = get("#nameSubmitBtn");
       submitBtn.onclick = () => {
         student_name = get("#stuName").value;
@@ -885,7 +919,9 @@ right_bracing9 : new Dom("right_bracing9"),
           return;
         }
         // take only first space
-        let fName = student_name.slice(0, student_name.indexOf(" "));
+        let spaceIndex = student_name.indexOf(" ");
+        spaceIndex = spaceIndex == -1 ? student_name.length : spaceIndex + 1;
+        let fName = student_name.slice(0, spaceIndex);
         hide(error);
         let tl = anime.timeline({
           easing: "easeOutExpo",
@@ -909,14 +945,15 @@ right_bracing9 : new Dom("right_bracing9"),
               // Scenes.items.tempText.innerHTML = `👋 Hey!<br>${fName}`;
               Scenes.items.tempText.item.style.fontWeight = "bold";
               // show(Scenes.items.tempText);
-              intru = new Typed(Scenes.items.tempText.item, {
+              Scenes.intru = new Typed(Scenes.items.tempText.item, {
+                showCursor: false,
                 strings: ["", `Hey!👋<br>${fName}`],
                 typeSpeed: 25,
               });
               Scenes.items.tempText.set(482, 1);
               textToSpeach(`Hey! ${fName}`);
               textToSpeach(
-                "Welcome to Foundation Wall in Foamwork Experiment of Foamwork Technology in Civil Engineering Virtual Lab developed by Prof. K. N. Jha, Department of Civil Engineering, IIT Delhi."
+                `Welcome to ${Scenes.experimentNameSpeech} Experiment of Formwork Technology in Civil Engineering Virtual Lab developed by Professor K N Jha, Department of Civil Engineering, IIT Delhi.`
               );
               Scenes.items.talk_cloud.set(450, -40, 180).push();
               setCC("");
@@ -925,19 +962,21 @@ right_bracing9 : new Dom("right_bracing9"),
             opacity: [0, 1],
           })
           .add({
-            begin(){
-               // to hide previous step images
-               intru.destroy();
-               Dom.hideAll();
+            begin() {
+              // to hide previous step images
+               if (Scenes.intru) {
+                 Scenes.intru.destroy();
+                 Scenes.intru = null;
+               }
+              Dom.hideAll();
               Scenes.items.welcomeBox.show("flex");
-            }
+            },
           })
-            .add({
-              duration: 12000,
-              complete() {
-                setCC("Click 'Next' to go to next step");
-                Dom.setBlinkArrow(true, 790, 444).play();
-                setIsProcessRunning(false);
+          .add({
+            duration: 12000,
+            complete() {
+              setIsProcessRunning(false);
+              Dom.setBlinkArrow(true, 790, 450).play();
             },
           });
       };
@@ -945,219 +984,80 @@ right_bracing9 : new Dom("right_bracing9"),
     }),
     (objective = function () {
       setIsProcessRunning(true);
-      Dom.hideAll()
+      Dom.hideAll();
 
       // to stop current voice
       window.speechSynthesis.cancel();
- 
+
       Scenes.items.welcomeBox.hide();
       Dom.setBlinkArrow(-1);
       setCC("");
-      
+
       // * Required Items
-      Scenes.items.projectIntro.show()
-      Scenes.items.objective.set(0,45)
-      
+      Scenes.items.projectIntro.show().push();
+      Scenes.items.objective.set(0, 45);
 
-    anime({
-      duration:4000, 
-      complete(){
-        setIsProcessRunning(false);
-        Dom.setBlinkArrow(true, 790, 444).play();
-        setCC("Click 'Next' to go to next step");
-
-      }
-
-    })
-    return true;
-  }),
-    // (step1 = function () {
-    //   setIsProcessRunning(true);
-    //   // to hide previous step
-    //   Dom.hideAll();
-    //   Scenes.items.projectIntro.hide()
-    //   Dom.setBlinkArrow(-1);
-
-    //   Scenes.setStepHeading("Step 1", "Marking the area (rectangularly)");
-    //   Scenes.items.land.set(0,0,404,950)
-
-    //   Scenes.items.chalk_with_hand.set(140,138,80,70).zIndex(6)
-      
-    //   Scenes.items.chalk_markings1.set(140,150,6,670).zIndex(5)
-    //   Scenes.items.marking_surface1.set(140,150,8,670).zIndex(5)
-
-    //   Scenes.items.chalk_markings2.set(757,200,6,100).rotate(90).zIndex(5)
-    //   Scenes.items.marking_surface2.set(757,200,8,100).rotate(90).zIndex(5)
-
-    //   Scenes.items.chalk_markings3.set(140,252,6,670).zIndex(5)
-    //   Scenes.items.marking_surface3.set(140,252,8,670).zIndex(5)
-
-    //   Scenes.items.chalk_markings4.set(94,200,6,100).rotate(90).zIndex(4)
-    //   Scenes.items.marking_surface4.set(94,200,8,100).rotate(90).zIndex(4)
-
-    //   // Scenes.items.chalk_markings5.set(284,201,6,282.8).rotate(45).zIndex(3)
-    //   // Scenes.items.marking_surface5.set(284,201,8,282.8).rotate(45).zIndex(3)
-
-    //   // Scenes.items.chalk_markings6.set(284,201,6,282.8).rotate(-45).zIndex(2)
-    //   // Scenes.items.marking_surface6.set(284,201,8,282.8).rotate(-45).zIndex(2)
-
-    //   Scenes.items.tempTitle1.set(815,190).setContent("300 mm").hidden()
-    //   Scenes.items.tempTitle2.set(425,260).setContent("2400 mm").hidden()
-
-    //   setCC("Click on the hand to mark the area rectangularly.")
-    //   Dom.setBlinkArrow(true,65,130 ).play()
-    //   // onclick
-    //   Scenes.items.chalk_with_hand.item.onclick = ()=>{
-    //     Dom.setBlinkArrow(-1);
-
-    //     anime.timeline({
-    //       easing: "easeOutExpo"
-    //     })
-    //     .add({
-    //       begin(){
-    //         Scenes.items.anime_main_dom.item.style.overflow = "hidden";
-    //       },
-    //       targets: [Scenes.items.chalk_with_hand.item,Scenes.items.marking_surface1.item],
-    //       translateX: 670,
-    //       duration: 3000,
-    //     })
-    //     .add({
-    //       begin(){
-    //         setCC("Marking the vertical length of 300mm")
-    //       },
-    //       targets: [Scenes.items.chalk_with_hand.item],
-    //       translateY: 100,
-    //       duration: 3000,
-    //       complete(){
-    //         Scenes.items.tempTitle1.hidden(false)
-    //       }
-    //     },3000)// marking of right vertical surface
-    //     .add({
-    //       targets: [Scenes.items.marking_surface2.item],
-    //       translateX: 100,
-    //       duration: 3000,
-    //     },3000)
-    //     .add({
-    //       begin(){
-    //         setCC("Marking the horizontal length of 300mm")
-    //       },
-    //       targets: [Scenes.items.marking_surface3.item],
-    //       translateX: -670,
-    //       duration: 3000,
-    //       complete(){
-    //         Scenes.items.tempTitle2.hidden(false)
-    //       }
-    //     },6000)
-    //     .add({
-    //       targets: [Scenes.items.chalk_with_hand.item],
-    //       translateX: 0,
-    //       duration: 3000,
-    //     },6000)
-    //     .add({
-    //       targets: [Scenes.items.chalk_with_hand.item],
-    //       translateY: 0,
-    //       duration: 3000,
-    //     },9000)// marking of left vertical surface
-    //     .add({
-    //       targets: [Scenes.items.marking_surface4.item],
-    //       top: "-=100",
-    //       duration: 3000,
-    //       complete(){
-    //         Dom.setBlinkArrow(true, 790, 408).play()
-    //         // Quiz.loadQuiz()
-    //         setCC("Click 'Next' to go to next step")
-    //         setIsProcessRunning(false)
-    //       }
-    //     },9000)
-    //     // .add({
-    //     //   targets: [Scenes.items.chalk_with_hand.item],
-    //     //   left: "+=200",
-    //     //   top: "+=200",
-    //     //   duration: 3000,
-    //     // },12000)
-    //     // .add({
-    //     //   targets: [Scenes.items.marking_surface5.item],
-    //     //   translateX: 282.8,
-    //     //   duration: 3000,
-    //     // },12000)
-    //     // .add({
-    //     //   begin(){
-    //     //     Scenes.items.chalk_with_hand.set(525,88)
-    //     //   },
-    //     //   endDelay: 500,
-    //     // })
-    //     // .add({
-    //     //   targets: [Scenes.items.chalk_with_hand.item],
-    //     //   translateX: -200.8,
-    //     //   translateY: 200.8,
-    //     //   duration: 3000,
-    //     // },15500)
-    //     // .add({
-    //     //   targets: [Scenes.items.marking_surface6.item],
-    //     //   translateX: -282.8,
-    //     //   duration: 3000,
-    //     //   complete(){
-    //     //     Dom.setBlinkArrow(true, 790, 408).play()
-    //     //     // Quiz.loadQuiz()
-    //     //     setCC("Click 'Next' to go to next step")
-    //     //     setIsProcessRunning(false)
-    //     //   }
-    //     // },15500)
-    //   }
-    //   return true
-    // }),
-    (step2 = function () {
+      Dom.animePush(anime({
+        duration: 4000,
+        complete() {
+          setIsProcessRunning(false);
+          Dom.setBlinkArrow(true, 790, 450).play();
+        },
+      }));
+      return true;
+    }),
+    (step1 = function () {
       // ! fixing the overflow
       Scenes.items.anime_main_dom.item.style.overflow = "visible";
 
       // hide
-      Scenes.items.projectIntro.hide()
+      Scenes.items.projectIntro.hide();
       Dom.hideAll();
       setIsProcessRunning(true);
       Dom.setBlinkArrow(-1);
-      
-      Scenes.setStepHeading("Step 2", "Placing HD Towers in the lab.")
+
+      Scenes.setStepHeading("Step 1", "Construct basic frame using HD Towers in the lab.");
 
       // * Required Elements
-      Scenes.items.left_base_plate1.set(-500,-40)
-      Scenes.items.left_base_plate2.set(-500,-40)
-      Scenes.items.left_base_plate3.set(-500,-40)
-      Scenes.items.left_base_plate4.set(-500,-40)  
+      Scenes.items.left_base_plate1.set(-500, -40);
+      Scenes.items.left_base_plate2.set(-500, -40);
+      Scenes.items.left_base_plate3.set(-500, -40);
+      Scenes.items.left_base_plate4.set(-500, -40);
 
-      Scenes.items.right_base_plate1.set(-500,-40)
-      Scenes.items.right_base_plate2.set(-500,-40)
-      Scenes.items.right_base_plate3.set(-500,-40)
-      Scenes.items.right_base_plate4.set(-500,-40)  
-      
-      Scenes.items.left_ct_prop1.set(-500,-40)
-      Scenes.items.left_ct_prop2.set(-500,-40)
-      Scenes.items.left_ct_prop3.set(-500,-40)
-      Scenes.items.left_ct_prop4.set(-500,-40)
-      Scenes.items.right_ct_prop1.set(-500,-40)
-      Scenes.items.right_ct_prop2.set(-500,-40)
-      Scenes.items.right_ct_prop3.set(-500,-40)
-      Scenes.items.right_ct_prop4.set(-500,-40)
+      Scenes.items.right_base_plate1.set(-500, -40);
+      Scenes.items.right_base_plate2.set(-500, -40);
+      Scenes.items.right_base_plate3.set(-500, -40);
+      Scenes.items.right_base_plate4.set(-500, -40);
 
-      Scenes.items.left_uhead1.set(-500,-40)
-      Scenes.items.left_uhead2.set(-500,-40)
-      Scenes.items.left_uhead3.set(-500,-40)
-      Scenes.items.left_uhead4.set(-500,-40)
-      Scenes.items.right_uhead1.set(-500,-40)
-      Scenes.items.right_uhead2.set(-500,-40)
-      Scenes.items.right_uhead3.set(-500,-40)
-      Scenes.items.right_uhead4.set(-500,-40)
+      Scenes.items.left_ct_prop1.set(-500, -40);
+      Scenes.items.left_ct_prop2.set(-500, -40);
+      Scenes.items.left_ct_prop3.set(-500, -40);
+      Scenes.items.left_ct_prop4.set(-500, -40);
+      Scenes.items.right_ct_prop1.set(-500, -40);
+      Scenes.items.right_ct_prop2.set(-500, -40);
+      Scenes.items.right_ct_prop3.set(-500, -40);
+      Scenes.items.right_ct_prop4.set(-500, -40);
+
+      Scenes.items.left_uhead1.set(-500, -40);
+      Scenes.items.left_uhead2.set(-500, -40);
+      Scenes.items.left_uhead3.set(-500, -40);
+      Scenes.items.left_uhead4.set(-500, -40);
+      Scenes.items.right_uhead1.set(-500, -40);
+      Scenes.items.right_uhead2.set(-500, -40);
+      Scenes.items.right_uhead3.set(-500, -40);
+      Scenes.items.right_uhead4.set(-500, -40);
 
       // ! remove
       // Scenes.items.left_base_plate1.set(0,0)
       // Scenes.items.left_base_plate2.set(0,0)
       // Scenes.items.left_base_plate3.set(0,0)
-      // Scenes.items.left_base_plate4.set(0,0)  
+      // Scenes.items.left_base_plate4.set(0,0)
 
       // Scenes.items.right_base_plate1.set(0,0)
       // Scenes.items.right_base_plate2.set(0,0)
       // Scenes.items.right_base_plate3.set(0,0)
-      // Scenes.items.right_base_plate4.set(0,0)  
-      
+      // Scenes.items.right_base_plate4.set(0,0)
+
       // Scenes.items.left_ct_prop1.set(0,0)
       // Scenes.items.left_ct_prop2.set(0,0)
       // Scenes.items.left_ct_prop3.set(0,0)
@@ -1176,507 +1076,372 @@ right_bracing9 : new Dom("right_bracing9"),
       // Scenes.items.right_uhead3.set(0,0)
       // Scenes.items.right_uhead4.set(0,0)
 
+      Scenes.items.contentAdderBox.set(null, -50).show("flex");
+      Scenes.contentAdderAddBtn("Base Plate");
+      Scenes.contentAdderAddBtn("HD Tower");
+      Scenes.contentAdderAddBtn("U-Head");
 
-      Scenes.items.contentAdderBox.set(null,-50).show("flex")
-      Scenes.contentAdderAddBtn("Base Plate")
-      Scenes.contentAdderAddBtn("HD Tower")
-      Scenes.contentAdderAddBtn("U-Head")
-
-
-      function basePlateAnime(){
-        anime.timeline({
-          easing: "easeInOutQuad",
-          duration: 2000,
-        })
-        .add({
-          targets: Scenes.items.left_base_plate1.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ]
-        })
-        .add({
-          targets: Scenes.items.left_base_plate2.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ]
-        })
-        .add({
-          targets: Scenes.items.left_base_plate3.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_base_plate4.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.right_base_plate1.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.right_base_plate2.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.right_base_plate3.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.right_base_plate4.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-          complete(){
-            setCC("Click on the 'HD Tower' to put it on the base plate.");      
-            Dom.setBlinkArrow(true, 705,15).play();
-          }  
-        })
+      function basePlateAnime() {
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.left_base_plate1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_base_plate2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_base_plate3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_base_plate4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_base_plate1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_base_plate2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_base_plate3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_base_plate4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              setCC("Click on the 'HD Tower' to put it on the base plate.");
+              Scenes.showArrowForMenuItem();
+            },
+          }));
       }
 
-      function hdTowerAnime(){
-        anime.timeline({
-          easing: "easeInOutQuad",
-          duration: 2000,
-        })
-        .add({
-          targets: Scenes.items.left_ct_prop1.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-          rotate: 0,
-        })
-        .add({
-          targets: Scenes.items.left_ct_prop2.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-          rotate: 0,
-        })
-        .add({
-          targets: Scenes.items.left_ct_prop3.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-          rotate: 0,
-        })
-        .add({
-          targets: Scenes.items.left_ct_prop4.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-          rotate: 0,  
-        })        
-        .add({
-          targets: Scenes.items.right_ct_prop1.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-          rotate: 0,
-        })
-        .add({
-          targets: Scenes.items.right_ct_prop2.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-          rotate: 0,
-        })
-        .add({
-          targets: Scenes.items.right_ct_prop3.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-          rotate: 0,
-        })
-        .add({
-          targets: Scenes.items.right_ct_prop4.item,
-          keyframes:[
-            {left : 0},
-            {top: 0},
-          ],
-          rotate: 0,
-          complete(){
-            setCC("Click on the 'U-Head' to put it on the CT Prop");      
-            Dom.setBlinkArrow(true, 705,65).play();
-          }  
-        })        
+      function hdTowerAnime() {
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.left_ct_prop1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            rotate: 0,
+          })
+          .add({
+            targets: Scenes.items.left_ct_prop2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            rotate: 0,
+          })
+          .add({
+            targets: Scenes.items.left_ct_prop3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            rotate: 0,
+          })
+          .add({
+            targets: Scenes.items.left_ct_prop4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            rotate: 0,
+          })
+          .add({
+            targets: Scenes.items.right_ct_prop1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            rotate: 0,
+          })
+          .add({
+            targets: Scenes.items.right_ct_prop2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            rotate: 0,
+          })
+          .add({
+            targets: Scenes.items.right_ct_prop3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            rotate: 0,
+          })
+          .add({
+            targets: Scenes.items.right_ct_prop4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            rotate: 0,
+            complete() {
+              setCC("Click on the 'U-Head' to put it on the CT Prop");
+              Scenes.showArrowForMenuItem();
+            },
+          }));
       }
 
-      function uHeadAnime(){
-        anime.timeline({
-          easing: "easeInOutQuad",
-          duration: 2000,
-        })
-        .add({
-          targets: Scenes.items.left_uhead1.item,
-          keyframes : [
-            {left : 0},
-            {top: 0},
-          ]             
-        })
-        .add({
-          targets: Scenes.items.left_uhead2.item,
-          keyframes : [
-            {left : 0},
-            {top: 0},
-          ]             
-        })
-        .add({
-          targets: Scenes.items.left_uhead3.item,
-          keyframes : [
-            {left : 0},
-            {top: 0},
-          ]             
-        })
-        .add({
-          targets: Scenes.items.left_uhead4.item,
-          keyframes : [
-            {left : 0},
-            {top: 0},
-          ], 
-        })   
-        .add({
-          targets: Scenes.items.right_uhead1.item,
-          keyframes : [
-            {left : 0},
-            {top: 0},
-          ]             
-        })
-        .add({
-          targets: Scenes.items.right_uhead2.item,
-          keyframes : [
-            {left : 0},
-            {top: 0},
-          ]             
-        })
-        .add({
-          targets: Scenes.items.right_uhead3.item,
-          keyframes : [
-            {left : 0},
-            {top: 0},
-          ]             
-        })
-        .add({
-          targets: Scenes.items.right_uhead4.item,
-          keyframes : [
-            {left : 0},
-            {top: 0},
-          ],
-          complete(){
-            Dom.setBlinkArrow(true, 790, 408).play();
-            setCC("Click 'Next' to go to next step");
-            setIsProcessRunning(false);
-            // Quiz.loadQuiz()
-          } 
-        })             
+      function uHeadAnime() {
+        anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.left_uhead1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_uhead2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_uhead3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_uhead4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_uhead1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_uhead2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_uhead3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_uhead4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              setIsProcessRunning(false);
+            },
+          });
       }
 
-    
-
-
-      setCC("Click on the 'Base Plate' to place it in the lab.");      
-      Dom.setBlinkArrow(true, 705, -35).play()
+      setCC("Click on the 'Base Plate' to place it in the lab.");
+      Scenes.showArrowForMenuItem();
 
       // onclick
-      let contentAdderBtns = getAll(".content-adder-box .btn")
-      contentAdderBtns[0].onclick = basePlateAnime
-      contentAdderBtns[1].onclick = hdTowerAnime
-      contentAdderBtns[2].onclick = uHeadAnime
+      let contentAdderBtns = getAll(".content-adder-box .btn");
+      contentAdderBtns[0].onclick = basePlateAnime;
+      contentAdderBtns[1].onclick = hdTowerAnime;
+      contentAdderBtns[2].onclick = uHeadAnime;
+
+      contentAdderBtns.forEach((cab) => {
+        let previousFunction = cab.onclick;
+        cab.onclick = () => {
+          Dom.setBlinkArrow(-1);
+          previousFunction();
+        };
+      });
       // remove all the previous elements
       // Dom.hideAll();
-      return true;  
-
+      return true;
     }),
-    (step3 = function () {
+    (step2 = function () {
       setIsProcessRunning(true);
 
       // todo all previous elements hide
       Dom.hideAll();
-      Scenes.items.contentAdderBox.item.innerHTML = ""
+      Scenes.items.contentAdderBox.item.innerHTML = "";
 
-      Scenes.setStepHeading("Step 3", "Attaching horizontal and diagonal bracing to support HD Tower.");
-      
+      Scenes.setStepHeading("Step 2", "Attaching horizontal and diagonal bracing to support HD Tower.");
+
       // Required Elements
-      Scenes.items.left_base_plate1.set(0,0)
-      Scenes.items.left_base_plate2.set(0,0)
-      Scenes.items.left_base_plate3.set(0,0)
-      Scenes.items.left_base_plate4.set(0,0)  
+      Scenes.items.left_base_plate1.set(0, 0);
+      Scenes.items.left_base_plate2.set(0, 0);
+      Scenes.items.left_base_plate3.set(0, 0);
+      Scenes.items.left_base_plate4.set(0, 0);
 
-      Scenes.items.right_base_plate1.set(0,0)
-      Scenes.items.right_base_plate2.set(0,0)
-      Scenes.items.right_base_plate3.set(0,0)
-      Scenes.items.right_base_plate4.set(0,0)  
-      
-      Scenes.items.left_ct_prop1.set(0,0)
-      Scenes.items.left_ct_prop2.set(0,0)
-      Scenes.items.left_ct_prop3.set(0,0)
-      Scenes.items.left_ct_prop4.set(0,0)
-      Scenes.items.right_ct_prop1.set(0,0)
-      Scenes.items.right_ct_prop2.set(0,0)
-      Scenes.items.right_ct_prop3.set(0,0)
-      Scenes.items.right_ct_prop4.set(0,0)
+      Scenes.items.right_base_plate1.set(0, 0);
+      Scenes.items.right_base_plate2.set(0, 0);
+      Scenes.items.right_base_plate3.set(0, 0);
+      Scenes.items.right_base_plate4.set(0, 0);
 
-      Scenes.items.left_uhead1.set(0,0)
-      Scenes.items.left_uhead2.set(0,0)
-      Scenes.items.left_uhead3.set(0,0)
-      Scenes.items.left_uhead4.set(0,0)
-      Scenes.items.right_uhead1.set(0,0)
-      Scenes.items.right_uhead2.set(0,0)
-      Scenes.items.right_uhead3.set(0,0)
-      Scenes.items.right_uhead4.set(0,0)
+      Scenes.items.left_ct_prop1.set(0, 0);
+      Scenes.items.left_ct_prop2.set(0, 0);
+      Scenes.items.left_ct_prop3.set(0, 0);
+      Scenes.items.left_ct_prop4.set(0, 0);
+      Scenes.items.right_ct_prop1.set(0, 0);
+      Scenes.items.right_ct_prop2.set(0, 0);
+      Scenes.items.right_ct_prop3.set(0, 0);
+      Scenes.items.right_ct_prop4.set(0, 0);
+
+      Scenes.items.left_uhead1.set(0, 0);
+      Scenes.items.left_uhead2.set(0, 0);
+      Scenes.items.left_uhead3.set(0, 0);
+      Scenes.items.left_uhead4.set(0, 0).zIndex(3);
+      Scenes.items.right_uhead1.set(0, 0);
+      Scenes.items.right_uhead2.set(0, 0);
+      Scenes.items.right_uhead3.set(0, 0);
+      Scenes.items.right_uhead4.set(0, 0).zIndex(3);
 
       // bracing
-      
-      Scenes.items.left_bracing1.set(-500,-10).zIndex(2) 
-      Scenes.items.left_bracing2.set(-500,-10).zIndex(2) 
-      Scenes.items.left_bracing3.set(-500,-10).zIndex(2) 
-      Scenes.items.left_bracing4.set(-500,-10) 
-      Scenes.items.left_bracing5.set(-500,-10).zIndex(1)
-      Scenes.items.left_bracing6.set(-500,-10).zIndex(2)
-      Scenes.items.left_bracing7.set(-500,-10)
-      Scenes.items.left_bracing8.set(-500,-10)
-      Scenes.items.left_bracing9.set(-500,-10)
-      Scenes.items.left_bracing10.set(-500,-10)
 
-      Scenes.items.right_bracing1.set(350,-10).zIndex(2) .hide()
-      Scenes.items.right_bracing2.set(350,-10).zIndex(2) .hide()
-      Scenes.items.right_bracing3.set(350,-10).zIndex(2) .hide()
-      Scenes.items.right_bracing4.set(350,-10) .hide()
-      Scenes.items.right_bracing5.set(350,-10).zIndex(1).hide() 
-      Scenes.items.right_bracing6.set(350,-10).zIndex(2) .hide()
-      Scenes.items.right_bracing7.set(350,-10) .hide()
-      Scenes.items.right_bracing8.set(350,-10) .hide()
-      Scenes.items.right_bracing9.set(350,-10) .hide()
-      Scenes.items.right_bracing10.set(350,-10) .hide()
+      Scenes.items.left_bracing1.set(-500, -10).zIndex(2);
+      Scenes.items.left_bracing2.set(-500, -10).zIndex(2);
+      Scenes.items.left_bracing3.set(-500, -10).zIndex(2);
+      Scenes.items.left_bracing4.set(-500, -10);
+      Scenes.items.left_bracing5.set(-500, -10).zIndex(1);
+      Scenes.items.left_bracing6.set(-500, -10).zIndex(2);
+      Scenes.items.left_bracing7.set(-500, -10);
+      Scenes.items.left_bracing8.set(-500, -10);
+      Scenes.items.left_bracing9.set(-500, -10);
+      Scenes.items.left_bracing10.set(-500, -10);
 
-      
-      
-      
-      Scenes.items.contentAdderBox.set(null,-50).show("flex")
-      Scenes.contentAdderAddBtn("Left Beam Bracing")
-      Scenes.contentAdderAddBtn("Right Beam Bracing")
+      Scenes.items.right_bracing1.set(350, -10).zIndex(2).hide();
+      Scenes.items.right_bracing2.set(350, -10).zIndex(2).hide();
+      Scenes.items.right_bracing3.set(350, -10).zIndex(2).hide();
+      Scenes.items.right_bracing4.set(350, -10).hide();
+      Scenes.items.right_bracing5.set(350, -10).zIndex(1).hide();
+      Scenes.items.right_bracing6.set(350, -10).zIndex(2).hide();
+      Scenes.items.right_bracing7.set(350, -10).hide();
+      Scenes.items.right_bracing8.set(350, -10).hide();
+      Scenes.items.right_bracing9.set(350, -10).hide();
+      Scenes.items.right_bracing10.set(350, -10).hide();
 
-      let contentAdderBtns = getAll(".content-adder-box .btn")
-      
+      Scenes.items.contentAdderBox.set(null, -50).show("flex");
+      Scenes.contentAdderAddBtn("Left Beam Bracing");
+      Scenes.contentAdderAddBtn("Right Beam Bracing");
 
+      let contentAdderBtns = getAll(".content-adder-box .btn");
 
-      const horizontalBracingAnime = ()=>{
-        Dom.setBlinkArrow(-1)
-        anime.timeline({
-          easing: "easeInOutQuad",
-          duration: 2000,
-        })
-        .add({
-          targets: Scenes.items.left_bracing1.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_bracing2.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_bracing3.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_bracing4.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_bracing5.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_bracing6.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_bracing7.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_bracing8.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_bracing9.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.left_bracing10.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          complete(){
-            Dom.setBlinkArrow(true, 655, 15).play()
-            setCC("Click on the 'Right Beam Bracing' to attach it with HD Towers.")
-          }
-        })
-      }
+      const horizontalBracingAnime = () => {
+        Dom.setBlinkArrow(-1);
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.left_bracing1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_bracing2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_bracing3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_bracing4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_bracing5.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_bracing6.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_bracing7.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_bracing8.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_bracing9.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_bracing10.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              Scenes.showArrowForMenuItem();
+              setCC("Click on the 'Right Beam Bracing' to attach it with HD Towers.");
+            },
+          }));
+      };
 
-      const diagonalBracingAnime = ()=>{
-        Dom.setBlinkArrow(-1)
-        anime.timeline({
-          easing: "easeInOutQuad",
-          duration: 2000,
-        })
-        .add({
-          targets: Scenes.items.right_bracing1.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing1.show()
-          }
-        })
-        .add({
-          targets: Scenes.items.right_bracing2.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing2.show()
-          }
-        })
-        .add({
-          targets: Scenes.items.right_bracing3.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing3.show()
-          }
-        })
-        .add({
-          targets: Scenes.items.right_bracing4.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing4.show()
-          }
-        })
-        .add({
-          targets: Scenes.items.right_bracing5.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing5.show()
-          }
-        })
-        .add({
-          targets: Scenes.items.right_bracing6.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing6.show()
-          }
-        })
-        .add({
-          targets: Scenes.items.right_bracing7.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing7.show()
-          }
-        })
-        .add({
-          targets: Scenes.items.right_bracing8.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing8.show()
-          }
-        })
-        .add({
-          targets: Scenes.items.right_bracing9.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing9.show()
-          }
-        })
-        .add({
-          targets: Scenes.items.right_bracing10.item,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          begin(){
-            Scenes.items.right_bracing10.show()
-          },
-          complete(){
-            Dom.setBlinkArrow(true, 790, 408).play();
-            setCC("Click 'Next' to go to next step");
-            setIsProcessRunning(false);
-          }
-        })
-      }
+      const diagonalBracingAnime = () => {
+        Dom.setBlinkArrow(-1);
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.right_bracing1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing1.show();
+            },
+          })
+          .add({
+            targets: Scenes.items.right_bracing2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing2.show();
+            },
+          })
+          .add({
+            targets: Scenes.items.right_bracing3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing3.show();
+            },
+          })
+          .add({
+            targets: Scenes.items.right_bracing4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing4.show();
+            },
+          })
+          .add({
+            targets: Scenes.items.right_bracing5.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing5.show();
+            },
+          })
+          .add({
+            targets: Scenes.items.right_bracing6.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing6.show();
+            },
+          })
+          .add({
+            targets: Scenes.items.right_bracing7.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing7.show();
+            },
+          })
+          .add({
+            targets: Scenes.items.right_bracing8.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing8.show();
+            },
+          })
+          .add({
+            targets: Scenes.items.right_bracing9.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing9.show();
+            },
+          })
+          .add({
+            targets: Scenes.items.right_bracing10.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            begin() {
+              Scenes.items.right_bracing10.show();
+            },
+            complete() {
+              setIsProcessRunning(false);
+            },
+          }));
+      };
 
       // const boltAnime = ()=>{
       //   Dom.setBlinkArrow(-1)
@@ -1755,1371 +1520,1151 @@ right_bracing9 : new Dom("right_bracing9"),
       //   })
       // }
 
-      Dom.setBlinkArrow(true, 655, -35).play();
-      setCC("Click on the 'Horizontal Bracing' to attach it with HD Towers.");
+      Scenes.showArrowForMenuItem();
+      setCC("Click on the 'Left Beam Bracing' to attach it with HD Towers.");
       // onclick
       contentAdderBtns[0].onclick = horizontalBracingAnime;
       contentAdderBtns[1].onclick = diagonalBracingAnime;
       // contentAdderBtns[2].onclick = boltAnime;
 
-      return true;
+      contentAdderBtns.forEach((cab) => {
+        let previousFunction = cab.onclick;
+        cab.onclick = () => {
+          Dom.setBlinkArrow(-1);
+          previousFunction();
+        };
+      });
 
+      return true;
     }),
-    (step4 = function () {
-      Dom.hideAll(); 
+    (step3 = function () {
+      Dom.hideAll();
       setIsProcessRunning(true);
       Scenes.items.contentAdderBox.setContent("");
-      Scenes.setStepHeading(
-        "Step 4",
-        "Placing aluminum beam and timber beam on the top of basic frame."
-      );
+      Scenes.setStepHeading("Step 3", "Placing aluminum beam and timber beam on the top of basic frame.");
 
-    // ! required item
-    Scenes.items.left_base_plate1.set(0,0)
-    Scenes.items.left_base_plate2.set(0,0)
-    Scenes.items.left_base_plate3.set(0,0)
-    Scenes.items.left_base_plate4.set(0,0)  
+      // ! required item
+      Scenes.items.left_base_plate1.set(0, 0);
+      Scenes.items.left_base_plate2.set(0, 0);
+      Scenes.items.left_base_plate3.set(0, 0);
+      Scenes.items.left_base_plate4.set(0, 0);
 
-    Scenes.items.right_base_plate1.set(0,0)
-    Scenes.items.right_base_plate2.set(0,0)
-    Scenes.items.right_base_plate3.set(0,0)
-    Scenes.items.right_base_plate4.set(0,0)  
-    
-    Scenes.items.left_ct_prop1.set(0,0)
-    Scenes.items.left_ct_prop2.set(0,0)
-    Scenes.items.left_ct_prop3.set(0,0)
-    Scenes.items.left_ct_prop4.set(0,0)
-    Scenes.items.right_ct_prop1.set(0,0)
-    Scenes.items.right_ct_prop2.set(0,0)
-    Scenes.items.right_ct_prop3.set(0,0)
-    Scenes.items.right_ct_prop4.set(0,0)
+      Scenes.items.right_base_plate1.set(0, 0);
+      Scenes.items.right_base_plate2.set(0, 0);
+      Scenes.items.right_base_plate3.set(0, 0);
+      Scenes.items.right_base_plate4.set(0, 0);
 
-    Scenes.items.left_uhead1.set(0,0)
-    Scenes.items.left_uhead2.set(0,0)
-    Scenes.items.left_uhead3.set(0,0)
-    Scenes.items.left_uhead4.set(0,0)
-    Scenes.items.right_uhead1.set(0,0)
-    Scenes.items.right_uhead2.set(0,0)
-    Scenes.items.right_uhead3.set(0,0)
-    Scenes.items.right_uhead4.set(0,0)
+      Scenes.items.left_ct_prop1.set(0, 0);
+      Scenes.items.left_ct_prop2.set(0, 0);
+      Scenes.items.left_ct_prop3.set(0, 0);
+      Scenes.items.left_ct_prop4.set(0, 0);
+      Scenes.items.right_ct_prop1.set(0, 0);
+      Scenes.items.right_ct_prop2.set(0, 0);
+      Scenes.items.right_ct_prop3.set(0, 0);
+      Scenes.items.right_ct_prop4.set(0, 0);
 
-    Scenes.items.left_aluminium1.set(-500,-40).zIndex(1)
-    Scenes.items.left_aluminium2.set(-500,-40).zIndex(1)
-    Scenes.items.right_aluminium1.set(-500,-40).zIndex(1)
-    Scenes.items.right_aluminium2.set(-500,-40).zIndex(1)
-    
-    Scenes.items.left_beam1.set(-500,-40).zIndex(2)
-    Scenes.items.left_beam2.set(-500,-40).zIndex(2)
-    Scenes.items.left_beam3.set(-500,-40).zIndex(2)
-    Scenes.items.left_beam4.set(-500,-40).zIndex(2)
-    Scenes.items.left_beam5.set(-500,-40).zIndex(2)
-    Scenes.items.left_beam6.set(-500,-40).zIndex(2)
-    Scenes.items.right_beam1.set(-500,-40).zIndex(2)
-    Scenes.items.right_beam2.set(-500,-40).zIndex(2)
-    Scenes.items.right_beam3.set(-500,-40).zIndex(2)
-    Scenes.items.right_beam4.set(-500,-40).zIndex(2)
-    Scenes.items.right_beam5.set(-500,-40).zIndex(2)
-    Scenes.items.right_beam6.set(-500,-40).zIndex(2)
-    
-    Scenes.items.left_bracing1.set(0,0).zIndex(1) 
-    Scenes.items.left_bracing2.set(0,0).zIndex(1) 
-    Scenes.items.left_bracing3.set(0,0).zIndex(1) 
-    Scenes.items.left_bracing4.set(0,0) 
-    Scenes.items.left_bracing5.set(0,0).zIndex(1)
-    Scenes.items.left_bracing6.set(0,0).zIndex(1)
-    Scenes.items.left_bracing7.set(0,0)
-    Scenes.items.left_bracing8.set(0,0)
-    Scenes.items.left_bracing9.set(0,0)
-    Scenes.items.left_bracing10.set(0,0)
+      Scenes.items.left_uhead1.set(0, 0);
+      Scenes.items.left_uhead2.set(0, 0);
+      Scenes.items.left_uhead3.set(0, 0);
+      Scenes.items.left_uhead4.set(0, 0).zIndex(2);
+      Scenes.items.right_uhead1.set(0, 0);
+      Scenes.items.right_uhead2.set(0, 0);
+      Scenes.items.right_uhead3.set(0, 0);
+      Scenes.items.right_uhead4.set(0, 0).zIndex(2);
 
-    Scenes.items.right_bracing1.set(0,0).zIndex(1)
-    Scenes.items.right_bracing2.set(0,0).zIndex(1)
-    Scenes.items.right_bracing3.set(0,0).zIndex(1)
-    Scenes.items.right_bracing4.set(0,0)
-    Scenes.items.right_bracing5.set(0,0).zIndex(1)
-    Scenes.items.right_bracing6.set(0,0).zIndex(1)
-    Scenes.items.right_bracing7.set(0,0)
-    Scenes.items.right_bracing8.set(0,0)
-    Scenes.items.right_bracing9.set(0,0)
-    Scenes.items.right_bracing10.set(0,0)
-    //! final pos
+      Scenes.items.left_aluminium1.set(-500, -40).zIndex(3);
+      Scenes.items.left_aluminium2.set(-500, -40).zIndex(3);
+      Scenes.items.right_aluminium1.set(-500, -40).zIndex(3);
+      Scenes.items.right_aluminium2.set(-500, -40).zIndex(3);
 
-    // content adder
-    Scenes.items.contentAdderBox.set(null, -50).show("flex").push()
-    Scenes.contentAdderAddBtn("Aluminium Beam")
-    Scenes.contentAdderAddBtn("Timber Beam")
-    let contentAdderBtns = getAll(".content-adder-box .btn")
-      
-    function aluminiumBeamAnime(){
-      anime.timeline({
-        easing: "easeInOutQuad",
-        duration: 2000,
-      })
-      .add({  
-        targets: Scenes.items.left_aluminium1.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.left_aluminium2.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({  
-        targets: Scenes.items.right_aluminium1.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.right_aluminium2.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ],
-        complete(){
-          setCC("Click on the 'Timber Beam' to add timber beam.")    
-          Dom.setBlinkArrow(true, 655,15).play()
-        }  
-      })
-    }
+      Scenes.items.left_beam1.set(-500, -40).zIndex(4);
+      Scenes.items.left_beam2.set(-500, -40).zIndex(4);
+      Scenes.items.left_beam3.set(-500, -40).zIndex(4);
+      Scenes.items.left_beam4.set(-500, -40).zIndex(4);
+      Scenes.items.left_beam5.set(-500, -40).zIndex(4);
+      Scenes.items.left_beam6.set(-500, -40).zIndex(4);
+      Scenes.items.right_beam1.set(-500, -40).zIndex(4);
+      Scenes.items.right_beam2.set(-500, -40).zIndex(4);
+      Scenes.items.right_beam3.set(-500, -40).zIndex(4);
+      Scenes.items.right_beam4.set(-500, -40).zIndex(4);
+      Scenes.items.right_beam5.set(-500, -40).zIndex(4);
+      Scenes.items.right_beam6.set(-500, -40).zIndex(4);
 
-    function timberBeamAnime(){
-      anime.timeline({
-        easing: "easeInOutQuad",
-        duration: 2000,
-      })
-      .add({
-        targets: Scenes.items.left_beam1.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.left_beam2.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.left_beam3.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.left_beam4.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.left_beam5.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.left_beam6.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ],   
-      })    
-      .add({
-        targets: Scenes.items.right_beam1.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.right_beam2.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.right_beam3.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.right_beam4.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.right_beam5.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.right_beam6.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ],
-        complete(){
-          Dom.setBlinkArrow(true, 790, 408).play();
-          setCC("Click 'Next' to go to next step");
-          setIsProcessRunning(false);
-          // Quiz.loadQuiz()
-        }   
-      })     
-    }
-     
-     
-      Dom.setBlinkArrow(true, 655, -35).play();
+      Scenes.items.left_bracing1.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing2.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing3.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing4.set(0, 0);
+      Scenes.items.left_bracing5.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing6.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing7.set(0, 0);
+      Scenes.items.left_bracing8.set(0, 0);
+      Scenes.items.left_bracing9.set(0, 0);
+      Scenes.items.left_bracing10.set(0, 0);
+
+      Scenes.items.right_bracing1.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing2.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing3.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing4.set(0, 0);
+      Scenes.items.right_bracing5.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing6.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing7.set(0, 0);
+      Scenes.items.right_bracing8.set(0, 0);
+      Scenes.items.right_bracing9.set(0, 0);
+      Scenes.items.right_bracing10.set(0, 0);
+      //! final pos
+
+      // content adder
+      Scenes.items.contentAdderBox.set(null, -50).show("flex").push();
+      Scenes.contentAdderAddBtn("Aluminium Beam");
+      Scenes.contentAdderAddBtn("Timber Beam");
+      let contentAdderBtns = getAll(".content-adder-box .btn");
+
+      function aluminiumBeamAnime() {
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.left_aluminium1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_aluminium2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_aluminium1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_aluminium2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              setCC("Click on the 'Timber Beam' to add timber beam.");
+              Scenes.showArrowForMenuItem();
+            },
+          }));
+      }
+
+      function timberBeamAnime() {
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.left_beam1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_beam2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_beam3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_beam4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_beam5.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.left_beam6.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_beam1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_beam2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_beam3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_beam4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_beam5.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.right_beam6.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              Quiz.loadQuiz();
+              setIsProcessRunning(false);
+            },
+          }));
+      }
+
+      Scenes.showArrowForMenuItem();
       setCC("Click on the 'Aluminium Beam' and attach it with basic frame");
-     //onclick pipe waler 
-     contentAdderBtns[0].onclick = aluminiumBeamAnime;
-     contentAdderBtns[1].onclick = timberBeamAnime;
+      //onclick pipe waler
+      contentAdderBtns[0].onclick = aluminiumBeamAnime;
+      contentAdderBtns[1].onclick = timberBeamAnime;
 
-     return true;
+      contentAdderBtns.forEach((cab) => {
+        let previousFunction = cab.onclick;
+        cab.onclick = () => {
+          Dom.setBlinkArrow(-1);
+          previousFunction();
+        };
+      });
 
+      return true;
     }),
-    (step5 = function () {
+    (step4 = function () {
       setIsProcessRunning(true);
-      Dom.hideAll()
-      Scenes.setStepHeading(
-        "Step 5",
-        "Placing sheathing on the top of timber beam."
-      );
+      Dom.hideAll();
+      Scenes.setStepHeading("Step 4", "Placing sheathing on the top of timber beam.");
       // todo remove all previous
       Scenes.items.contentAdderBox.setContent("");
 
       //! Required Items
-      Scenes.items.left_base_plate1.set(0,0)
-      Scenes.items.left_base_plate2.set(0,0)
-      Scenes.items.left_base_plate3.set(0,0)
-      Scenes.items.left_base_plate4.set(0,0)  
-  
-      Scenes.items.right_base_plate1.set(0,0)
-      Scenes.items.right_base_plate2.set(0,0)
-      Scenes.items.right_base_plate3.set(0,0)
-      Scenes.items.right_base_plate4.set(0,0)  
-      
-      Scenes.items.left_ct_prop1.set(0,0)
-      Scenes.items.left_ct_prop2.set(0,0)
-      Scenes.items.left_ct_prop3.set(0,0)
-      Scenes.items.left_ct_prop4.set(0,0)
-      Scenes.items.right_ct_prop1.set(0,0)
-      Scenes.items.right_ct_prop2.set(0,0)
-      Scenes.items.right_ct_prop3.set(0,0)
-      Scenes.items.right_ct_prop4.set(0,0)
-  
-      Scenes.items.left_uhead1.set(0,0)
-      Scenes.items.left_uhead2.set(0,0)
-      Scenes.items.left_uhead3.set(0,0)
-      Scenes.items.left_uhead4.set(0,0)
-      Scenes.items.right_uhead1.set(0,0)
-      Scenes.items.right_uhead2.set(0,0)
-      Scenes.items.right_uhead3.set(0,0)
-      Scenes.items.right_uhead4.set(0,0)
-  
-      Scenes.items.left_aluminium1.set(0,0).zIndex(1)
-      Scenes.items.left_aluminium2.set(0,0).zIndex(1)
-      Scenes.items.right_aluminium1.set(0,0).zIndex(1)
-      Scenes.items.right_aluminium2.set(0,0).zIndex(1)
-      
-      Scenes.items.left_beam1.set(0,0).zIndex(2)
-      Scenes.items.left_beam2.set(0,0).zIndex(2)
-      Scenes.items.left_beam3.set(0,0).zIndex(2)
-      Scenes.items.left_beam4.set(0,0).zIndex(2)
-      Scenes.items.left_beam5.set(0,0).zIndex(2)
-      Scenes.items.left_beam6.set(0,0).zIndex(2)
-      Scenes.items.right_beam1.set(0,0).zIndex(2)
-      Scenes.items.right_beam2.set(0,0).zIndex(2)
-      Scenes.items.right_beam3.set(0,0).zIndex(2)
-      Scenes.items.right_beam4.set(0,0).zIndex(2)
-      Scenes.items.right_beam5.set(0,0).zIndex(2)
-      Scenes.items.right_beam6.set(0,0).zIndex(2)
+      Scenes.items.left_base_plate1.set(0, 0);
+      Scenes.items.left_base_plate2.set(0, 0);
+      Scenes.items.left_base_plate3.set(0, 0);
+      Scenes.items.left_base_plate4.set(0, 0);
 
-      Scenes.items.hammer.set(790, 332,30).zIndex(7)
+      Scenes.items.right_base_plate1.set(0, 0);
+      Scenes.items.right_base_plate2.set(0, 0);
+      Scenes.items.right_base_plate3.set(0, 0);
+      Scenes.items.right_base_plate4.set(0, 0);
 
-      Scenes.items.left_bracing1.set(0,0).zIndex(1) 
-      Scenes.items.left_bracing2.set(0,0).zIndex(1) 
-      Scenes.items.left_bracing3.set(0,0).zIndex(1) 
-      Scenes.items.left_bracing4.set(0,0) 
-      Scenes.items.left_bracing5.set(0,0).zIndex(1)
-      Scenes.items.left_bracing6.set(0,0).zIndex(1)
-      Scenes.items.left_bracing7.set(0,0)
-      Scenes.items.left_bracing8.set(0,0)
-      Scenes.items.left_bracing9.set(0,0)
-      Scenes.items.left_bracing10.set(0,0)
-  
-      Scenes.items.right_bracing1.set(0,0).zIndex(1)
-      Scenes.items.right_bracing2.set(0,0).zIndex(1)
-      Scenes.items.right_bracing3.set(0,0).zIndex(1)
-      Scenes.items.right_bracing4.set(0,0)
-      Scenes.items.right_bracing5.set(0,0).zIndex(1)
-      Scenes.items.right_bracing6.set(0,0).zIndex(1)
-      Scenes.items.right_bracing7.set(0,0)
-      Scenes.items.right_bracing8.set(0,0)
-      Scenes.items.right_bracing9.set(0,0)
-      Scenes.items.right_bracing10.set(0,0)
+      Scenes.items.left_ct_prop1.set(0, 0);
+      Scenes.items.left_ct_prop2.set(0, 0);
+      Scenes.items.left_ct_prop3.set(0, 0);
+      Scenes.items.left_ct_prop4.set(0, 0);
+      Scenes.items.right_ct_prop1.set(0, 0);
+      Scenes.items.right_ct_prop2.set(0, 0);
+      Scenes.items.right_ct_prop3.set(0, 0);
+      Scenes.items.right_ct_prop4.set(0, 0);
 
+      Scenes.items.left_uhead1.set(0, 0);
+      Scenes.items.left_uhead2.set(0, 0);
+      Scenes.items.left_uhead3.set(0, 0);
+      Scenes.items.left_uhead4.set(0, 0);
+      Scenes.items.right_uhead1.set(0, 0);
+      Scenes.items.right_uhead2.set(0, 0);
+      Scenes.items.right_uhead3.set(0, 0);
+      Scenes.items.right_uhead4.set(0, 0);
+
+      Scenes.items.left_aluminium1.set(0, 0).zIndex(1);
+      Scenes.items.left_aluminium2.set(0, 0).zIndex(1);
+      Scenes.items.right_aluminium1.set(0, 0).zIndex(1);
+      Scenes.items.right_aluminium2.set(0, 0).zIndex(1);
+
+      Scenes.items.left_beam1.set(0, 0).zIndex(2);
+      Scenes.items.left_beam2.set(0, 0).zIndex(2);
+      Scenes.items.left_beam3.set(0, 0).zIndex(2);
+      Scenes.items.left_beam4.set(0, 0).zIndex(2);
+      Scenes.items.left_beam5.set(0, 0).zIndex(2);
+      Scenes.items.left_beam6.set(0, 0).zIndex(2);
+      Scenes.items.right_beam1.set(0, 0).zIndex(2);
+      Scenes.items.right_beam2.set(0, 0).zIndex(2);
+      Scenes.items.right_beam3.set(0, 0).zIndex(2);
+      Scenes.items.right_beam4.set(0, 0).zIndex(2);
+      Scenes.items.right_beam5.set(0, 0).zIndex(2);
+      Scenes.items.right_beam6.set(0, 0).zIndex(2);
+
+      Scenes.items.hammer.set(790, 332, 30).zIndex(7);
+
+      Scenes.items.left_bracing1.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing2.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing3.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing4.set(0, 0);
+      Scenes.items.left_bracing5.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing6.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing7.set(0, 0);
+      Scenes.items.left_bracing8.set(0, 0);
+      Scenes.items.left_bracing9.set(0, 0);
+      Scenes.items.left_bracing10.set(0, 0);
+
+      Scenes.items.right_bracing1.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing2.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing3.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing4.set(0, 0);
+      Scenes.items.right_bracing5.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing6.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing7.set(0, 0);
+      Scenes.items.right_bracing8.set(0, 0);
+      Scenes.items.right_bracing9.set(0, 0);
+      Scenes.items.right_bracing10.set(0, 0);
 
       // ! final pos
-      Scenes.items.left_sheathing1.set(-500,-40).zIndex(3)
+      Scenes.items.left_sheathing1.set(-500, -40).zIndex(3);
       // Scenes.items.left_sheathing1_nail_helper.set(0,0).zIndex(5)
-      Scenes.items.left_sheathing1_nail1.set(550,230).zIndex(4)
-      Scenes.items.left_sheathing1_nail2.set(535,218).zIndex(4)
-      Scenes.items.left_sheathing1_nail3.set(478,282).zIndex(4)
-      Scenes.items.left_sheathing1_nail4.set(461,271).zIndex(4)
-      
-      Scenes.items.right_sheathing1.set(-500,-40).zIndex(3)
+      Scenes.items.left_sheathing1_nail1.set(550, 230).zIndex(4);
+      Scenes.items.left_sheathing1_nail2.set(535, 218).zIndex(4);
+      Scenes.items.left_sheathing1_nail3.set(478, 282).zIndex(4);
+      Scenes.items.left_sheathing1_nail4.set(461, 271).zIndex(4);
+
+      Scenes.items.right_sheathing1.set(-500, -40).zIndex(3);
       // Scenes.items.right_sheathing1_nail_helper.set(0,0).zIndex(5)
-      Scenes.items.right_sheathing1_nail1.set(550-173,230-97).zIndex(4)
-      Scenes.items.right_sheathing1_nail2.set(535-173,218-97).zIndex(4)
-      Scenes.items.right_sheathing1_nail3.set(478-175,282-97).zIndex(4)
-      Scenes.items.right_sheathing1_nail4.set(461-173,271-97).zIndex(4)
-      
-      let hammerAnime  =  anime({
+      Scenes.items.right_sheathing1_nail1.set(550 - 173, 230 - 97).zIndex(4);
+      Scenes.items.right_sheathing1_nail2.set(535 - 173, 218 - 97).zIndex(4);
+      Scenes.items.right_sheathing1_nail3.set(478 - 175, 282 - 97).zIndex(4);
+      Scenes.items.right_sheathing1_nail4.set(461 - 173, 271 - 97).zIndex(4);
+
+      let hammerAnime = anime({
         targets: Scenes.items.hammer.item,
-        keyframes: [
-          {rotateZ: [0, 30]},
-          {rotateZ: [0, 30]},
-          {rotateZ: [0, 30]},
-          {rotateZ: [0, 30]},
-        ],
+        keyframes: [{ rotateZ: [0, 30] }, { rotateZ: [0, 30] }, { rotateZ: [0, 30] }, { rotateZ: [0, 30] }],
         autoplay: false,
         duration: 3000,
-      })
+      });
+      Dom.animePush(hammerAnime);
 
       // content adder
       Scenes.items.contentAdderBox.set(null, -50).show("flex").push();
-      Scenes.contentAdderAddBtn("Sheathing")
-      Scenes.contentAdderAddBtn("Nailing")
+      Scenes.contentAdderAddBtn("Sheathing");
+      Scenes.contentAdderAddBtn("Nailing");
 
       let contentAdderBtns = getAll(".content-adder-box .btn");
 
-      const sheathingAnime = ()=>{
-        Dom.setBlinkArrow(-1)
-        anime.timeline({
-          easing: "easeInOutQuad",
-          
-        })
-        .add({
-          targets: [Scenes.items.left_sheathing1.item],
-          duration: 4000,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          complete(){
-            Scenes.items.left_sheathing1_nail_helper.set(0,0).zIndex(5)
-          }
-        })
-        .add({
-          targets: [Scenes.items.right_sheathing1.item],
-          duration: 4000,
-          keyframes: [
-            {left: 0},
-            {top: 0},
-          ],
-          complete(){
-            Scenes.items.right_sheathing1_nail_helper.set(0,0).zIndex(5)
-            Dom.setBlinkArrow(true, 710,15).play();
-            setCC("Click on the 'Nailing' to nail on the sheathing.");
-          }
-        })
-      }
-      
-      const nailingAnime = ()=>{
-        Dom.setBlinkArrow(-1)
-        anime.timeline({
-          easing: "easeInOutQuad",
-          duration: 2000,
-        })
-        // ! First nailing anime
-        .add({
-          targets: Scenes.items.left_sheathing1_nail1.item,
-          keyframes:[
-            {top: 0},
-            {left: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.hammer.item,
-          left: 155,
-          top: 95,
-        })
-        .add({
-          begin(){
-            hammerAnime.play()
-          },
-          targets: [Scenes.items.left_sheathing1_nail1.item,Scenes.items.hammer.item],
-          top: ["+=0","+=2","+=2","+=2","+=2"],
-          duration: 3000
-        })
-        // ! Second nailing animation
-        .add({
-          targets: Scenes.items.left_sheathing1_nail2.item,
-          keyframes:[
-            {top: 0},
-            {left: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.hammer.item,
-          left: 175,
-          top: 110,
-        })
-        .add({
-          begin(){
-            hammerAnime.play()
-          },
-          targets: [Scenes.items.left_sheathing1_nail2.item,Scenes.items.hammer.item],
-          top: ["+=0","+=2","+=2","+=2","+=2"],
-          duration: 3000
-        })
-        // ! Third nailing animation
-        .add({
-          targets: Scenes.items.left_sheathing1_nail3.item,
-          keyframes:[
-            {top: 0},
-            {left: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.hammer.item,
-          left: 237,
-          top: 45,
-        })
-        .add({
-          begin(){
-            hammerAnime.play()
-          },
-          targets: [Scenes.items.left_sheathing1_nail3.item,Scenes.items.hammer.item],
-          top: ["+=0","+=2","+=2","+=2","+=2"],
-          duration: 3000
-        })
-        // ! 4 nailing animation
-        .add({
-          targets: Scenes.items.left_sheathing1_nail4.item,
-          keyframes:[
-            {top: 0},     
-            {left: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.hammer.item,
-          left: 265,
-          top: 53,
-        })
-        .add({
-          begin(){
-            hammerAnime.play()
-          },
-          targets: [Scenes.items.left_sheathing1_nail4.item,Scenes.items.hammer.item],
-          top: ["+=0","+=2","+=2","+=2","+=2"],
-          duration: 3000
-        })
-        
-        // * Right Beam Nail anime
-        .add({
-          targets: Scenes.items.right_sheathing1_nail1.item,
-          keyframes:[
-            {top: 0},
-            {left: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.hammer.item,
-          left: 325,
-          top: 210,
-        })
-        .add({
-          begin(){
-            hammerAnime.play()
-          },
-          targets: [Scenes.items.right_sheathing1_nail1.item,Scenes.items.hammer.item],
-          top: ["+=0","+=2","+=2","+=2","+=2"],
-          duration: 3000
-        })
-        // ! Second nailing animation
-        .add({
-          targets: Scenes.items.right_sheathing1_nail2.item,
-          keyframes:[
-            {top: 0},
-            {left: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.hammer.item,
-          left: 348,
-          top: 222,
-        })
-        .add({
-          begin(){
-            hammerAnime.play()
-          },
-          targets: [Scenes.items.right_sheathing1_nail2.item,Scenes.items.hammer.item],
-          top: ["+=0","+=2","+=2","+=2","+=2"],
-          duration: 3000
-        })
-        // ! Third nailing animation
-        .add({
-          targets: Scenes.items.right_sheathing1_nail3.item,
-          keyframes:[
-            {top: 0},
-            {left: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.hammer.item,
-          left: 412,
-          top: 155,
-        })
-        .add({
-          begin(){
-            hammerAnime.play()
-          },
-          targets: [Scenes.items.right_sheathing1_nail3.item,Scenes.items.hammer.item],
-          top: ["+=0","+=2","+=2","+=2","+=2"],
-          duration: 3000
-        })
-        // ! 4 nailing animation
-        .add({
-          targets: Scenes.items.right_sheathing1_nail4.item,
-          keyframes:[
-            {top: 0},     
-            {left: 0},
-          ],
-        })
-        .add({
-          targets: Scenes.items.hammer.item,
-          left: 430,
-          top: 167,
-        })
-        .add({
-          begin(){
-            hammerAnime.play()
-          },
-          targets: [Scenes.items.right_sheathing1_nail4.item,Scenes.items.hammer.item],
-          top: ["+=0","+=2","+=2","+=2","+=2"],
-          duration: 3000
-        })
+      const sheathingAnime = () => {
+        Dom.setBlinkArrow(-1);
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+          })
+          .add({
+            targets: [Scenes.items.left_sheathing1.item],
+            duration: 4000,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              Scenes.items.left_sheathing1_nail_helper.set(0, 0).zIndex(5);
+            },
+          })
+          .add({
+            targets: [Scenes.items.right_sheathing1.item],
+            duration: 4000,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              Scenes.items.right_sheathing1_nail_helper.set(0, 0).zIndex(5);
+              Scenes.showArrowForMenuItem();
+              setCC("Click on the 'Nailing' to nail on the sheathing.");
+            },
+          }));
+      };
 
-        // ! nailing completed ---xxx---
-        .add({
-          targets: Scenes.items.hammer.item,
-          left: 800,
-          top: 350,
-          rotate: 0,
-          complete(){
-            Dom.setBlinkArrow(true, 790, 408).play();
-            setCC("Click 'Next' to go to next step");
-            setIsProcessRunning(false);
-            // Quiz.loadQuiz()
-          }
-        })
-      }
-  
-      setCC("Click on the 'Sheathing' to add sheathing in the lab.");      
-      Dom.setBlinkArrow(true, 720,-35).play();
-    //onclick
-    contentAdderBtns[0].onclick = sheathingAnime
-    contentAdderBtns[1].onclick = nailingAnime
+      const nailingAnime = () => {
+        Dom.setBlinkArrow(-1);
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          // ! First nailing anime
+          .add({
+            targets: Scenes.items.left_sheathing1_nail1.item,
+            keyframes: [{ top: 0 }, { left: 0 }],
+          })
+          .add({
+            targets: Scenes.items.hammer.item,
+            left: 155,
+            top: 95,
+          })
+          .add({
+            begin() {
+              hammerAnime.play();
+            },
+            targets: [Scenes.items.left_sheathing1_nail1.item, Scenes.items.hammer.item],
+            top: ["+=0", "+=2", "+=2", "+=2", "+=2"],
+            duration: 3000,
+          })
+          // ! Second nailing animation
+          .add({
+            targets: Scenes.items.left_sheathing1_nail2.item,
+            keyframes: [{ top: 0 }, { left: 0 }],
+          })
+          .add({
+            targets: Scenes.items.hammer.item,
+            left: 175,
+            top: 110,
+          })
+          .add({
+            begin() {
+              hammerAnime.play();
+            },
+            targets: [Scenes.items.left_sheathing1_nail2.item, Scenes.items.hammer.item],
+            top: ["+=0", "+=2", "+=2", "+=2", "+=2"],
+            duration: 3000,
+          })
+          // ! Third nailing animation
+          .add({
+            targets: Scenes.items.left_sheathing1_nail3.item,
+            keyframes: [{ top: 0 }, { left: 0 }],
+          })
+          .add({
+            targets: Scenes.items.hammer.item,
+            left: 237,
+            top: 45,
+          })
+          .add({
+            begin() {
+              hammerAnime.play();
+            },
+            targets: [Scenes.items.left_sheathing1_nail3.item, Scenes.items.hammer.item],
+            top: ["+=0", "+=2", "+=2", "+=2", "+=2"],
+            duration: 3000,
+          })
+          // ! 4 nailing animation
+          .add({
+            targets: Scenes.items.left_sheathing1_nail4.item,
+            keyframes: [{ top: 0 }, { left: 0 }],
+          })
+          .add({
+            targets: Scenes.items.hammer.item,
+            left: 265,
+            top: 53,
+          })
+          .add({
+            begin() {
+              hammerAnime.play();
+            },
+            targets: [Scenes.items.left_sheathing1_nail4.item, Scenes.items.hammer.item],
+            top: ["+=0", "+=2", "+=2", "+=2", "+=2"],
+            duration: 3000,
+          })
 
-    // setCC("Click 'Next' to go to next step");
-        //   Dom.setBlinkArrow(true, 790, 408).play();
-        //   setIsProcessRunning(false);
-        //   anime({
-        //     duration: 1000,
-        //     complete(){
-        //       Quiz.loadQuiz()
-        //     }
-        //   });
-        // };
+          // * Right Beam Nail anime
+          .add({
+            targets: Scenes.items.right_sheathing1_nail1.item,
+            keyframes: [{ top: 0 }, { left: 0 }],
+          })
+          .add({
+            targets: Scenes.items.hammer.item,
+            left: 325,
+            top: 210,
+          })
+          .add({
+            begin() {
+              hammerAnime.play();
+            },
+            targets: [Scenes.items.right_sheathing1_nail1.item, Scenes.items.hammer.item],
+            top: ["+=0", "+=2", "+=2", "+=2", "+=2"],
+            duration: 3000,
+          })
+          // ! Second nailing animation
+          .add({
+            targets: Scenes.items.right_sheathing1_nail2.item,
+            keyframes: [{ top: 0 }, { left: 0 }],
+          })
+          .add({
+            targets: Scenes.items.hammer.item,
+            left: 348,
+            top: 222,
+          })
+          .add({
+            begin() {
+              hammerAnime.play();
+            },
+            targets: [Scenes.items.right_sheathing1_nail2.item, Scenes.items.hammer.item],
+            top: ["+=0", "+=2", "+=2", "+=2", "+=2"],
+            duration: 3000,
+          })
+          // ! Third nailing animation
+          .add({
+            targets: Scenes.items.right_sheathing1_nail3.item,
+            keyframes: [{ top: 0 }, { left: 0 }],
+          })
+          .add({
+            targets: Scenes.items.hammer.item,
+            left: 412,
+            top: 155,
+          })
+          .add({
+            begin() {
+              hammerAnime.play();
+            },
+            targets: [Scenes.items.right_sheathing1_nail3.item, Scenes.items.hammer.item],
+            top: ["+=0", "+=2", "+=2", "+=2", "+=2"],
+            duration: 3000,
+          })
+          // ! 4 nailing animation
+          .add({
+            targets: Scenes.items.right_sheathing1_nail4.item,
+            keyframes: [{ top: 0 }, { left: 0 }],
+          })
+          .add({
+            targets: Scenes.items.hammer.item,
+            left: 430,
+            top: 167,
+          })
+          .add({
+            begin() {
+              hammerAnime.play();
+            },
+            targets: [Scenes.items.right_sheathing1_nail4.item, Scenes.items.hammer.item],
+            top: ["+=0", "+=2", "+=2", "+=2", "+=2"],
+            duration: 3000,
+          })
+
+          // ! nailing completed ---xxx---
+          .add({
+            targets: Scenes.items.hammer.item,
+            left: 800,
+            top: 350,
+            rotate: 0,
+            complete() {
+              Quiz.loadQuiz();
+              setIsProcessRunning(false);
+            },
+          }));
+      };
+
+      setCC("Click on the 'Sheathing' to add sheathing in the lab.");
+      Scenes.showArrowForMenuItem();
+      //onclick
+      contentAdderBtns[0].onclick = sheathingAnime;
+      contentAdderBtns[1].onclick = nailingAnime;
+
+      contentAdderBtns.forEach((cab) => {
+        let previousFunction = cab.onclick;
+        cab.onclick = () => {
+          Dom.setBlinkArrow(-1);
+          previousFunction();
+        };
+      });
+
+      // setCC("Click 'Next' to go to next step");
+      //   Dom.setBlinkArrow(true, 790, 408).play();
+      //   setIsProcessRunning(false);
+      //   Dom.setBlinkArrow(true, 790, 408).play();
+      //   setIsProcessRunning(false);
+      // };
+      return true;
+    }),
+    (step5 = function () {
+      setIsProcessRunning(true);
+
+      Scenes.setStepHeading(
+        "Step 5",
+        "Placing inner and outer beam with the help of beam forming support (BFS) with extension."
+      );
+
+      // todo Required Items
+      Scenes.items.left_base_plate1.set(0, 0);
+      Scenes.items.left_base_plate2.set(0, 0);
+      Scenes.items.left_base_plate3.set(0, 0);
+      Scenes.items.left_base_plate4.set(0, 0);
+
+      Scenes.items.right_base_plate1.set(0, 0);
+      Scenes.items.right_base_plate2.set(0, 0);
+      Scenes.items.right_base_plate3.set(0, 0);
+      Scenes.items.right_base_plate4.set(0, 0);
+
+      Scenes.items.left_ct_prop1.set(0, 0);
+      Scenes.items.left_ct_prop2.set(0, 0);
+      Scenes.items.left_ct_prop3.set(0, 0);
+      Scenes.items.left_ct_prop4.set(0, 0);
+      Scenes.items.right_ct_prop1.set(0, 0);
+      Scenes.items.right_ct_prop2.set(0, 0);
+      Scenes.items.right_ct_prop3.set(0, 0);
+      Scenes.items.right_ct_prop4.set(0, 0);
+
+      Scenes.items.left_uhead1.set(0, 0);
+      Scenes.items.left_uhead2.set(0, 0);
+      Scenes.items.left_uhead3.set(0, 0);
+      Scenes.items.left_uhead4.set(0, 0);
+      Scenes.items.right_uhead1.set(0, 0);
+      Scenes.items.right_uhead2.set(0, 0);
+      Scenes.items.right_uhead3.set(0, 0);
+      Scenes.items.right_uhead4.set(0, 0);
+
+      Scenes.items.left_aluminium1.set(0, 0).zIndex(1);
+      Scenes.items.left_aluminium2.set(0, 0).zIndex(1);
+      Scenes.items.right_aluminium1.set(0, 0).zIndex(1);
+      Scenes.items.right_aluminium2.set(0, 0).zIndex(1);
+
+      Scenes.items.left_beam1.set(0, 0).zIndex(2);
+      Scenes.items.left_beam2.set(0, 0).zIndex(2);
+      Scenes.items.left_beam3.set(0, 0).zIndex(2);
+      Scenes.items.left_beam4.set(0, 0).zIndex(2);
+      Scenes.items.left_beam5.set(0, 0).zIndex(2);
+      Scenes.items.left_beam6.set(0, 0).zIndex(2);
+      Scenes.items.right_beam1.set(0, 0).zIndex(2);
+      Scenes.items.right_beam2.set(0, 0).zIndex(2);
+      Scenes.items.right_beam3.set(0, 0).zIndex(2);
+      Scenes.items.right_beam4.set(0, 0).zIndex(2);
+      Scenes.items.right_beam5.set(0, 0).zIndex(2);
+      Scenes.items.right_beam6.set(0, 0).zIndex(2);
+
+      Scenes.items.hammer.set(790, 332, 30).zIndex(7);
+
+      Scenes.items.left_sheathing1.set(0, 0).zIndex(3);
+      Scenes.items.left_sheathing1_nail_helper.set(0, 0).zIndex(5);
+      Scenes.items.left_sheathing1_nail1.set(0, 8).zIndex(4);
+      Scenes.items.left_sheathing1_nail2.set(0, 8).zIndex(4);
+      Scenes.items.left_sheathing1_nail3.set(0, 8).zIndex(4);
+      Scenes.items.left_sheathing1_nail4.set(0, 8).zIndex(4);
+
+      Scenes.items.right_sheathing1.set(0, 0).zIndex(3);
+      Scenes.items.right_sheathing1_nail_helper.set(0, 0).zIndex(5);
+      Scenes.items.right_sheathing1_nail1.set(0, 8).zIndex(4);
+      Scenes.items.right_sheathing1_nail2.set(0, 8).zIndex(4);
+      Scenes.items.right_sheathing1_nail3.set(0, 8).zIndex(4);
+      Scenes.items.right_sheathing1_nail4.set(0, 8).zIndex(4);
+
+      Scenes.items.left_bracing1.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing2.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing3.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing4.set(0, 0);
+      Scenes.items.left_bracing5.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing6.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing7.set(0, 0);
+      Scenes.items.left_bracing8.set(0, 0);
+      Scenes.items.left_bracing9.set(0, 0);
+      Scenes.items.left_bracing10.set(0, 0);
+
+      Scenes.items.right_bracing1.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing2.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing3.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing4.set(0, 0);
+      Scenes.items.right_bracing5.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing6.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing7.set(0, 0);
+      Scenes.items.right_bracing8.set(0, 0);
+      Scenes.items.right_bracing9.set(0, 0);
+      Scenes.items.right_bracing10.set(0, 0);
+
+      Scenes.items.videoBox.set(710, 140, null).show("flex");
+      Scenes.items.videoBoxSrc.set(0, null, 200);
+      Scenes.items.videoBoxSrc.item.src = Scenes.items.bfs_video.item.src;
+      Scenes.items.videoBoxTitle.setContent("BFS Installation");
+      Scenes.items.videoBoxRestartBtn.item.onclick = () => {
+        Scenes.items.videoBoxSrc.item.play();
+      };
+
+      // image Box
+      // Scenes.items.imageBox.show("flex").set(750,200)
+      // Scenes.items.imageBoxSrc.item.src = "./src/images/real_head_adapter.png"
+      // Scenes.items.imageBoxTitle.setContent("Head Adapter")
+
+      //! final position
+      Scenes.items.left_bfs1_left.set(-500, -30).zIndex(2);
+      Scenes.items.left_bfs2_left.set(-500, -30).zIndex(2);
+      Scenes.items.left_bfs3_left.set(-500, -30).zIndex(2);
+      Scenes.items.left_bfs1_right.set(-500, 30).zIndex(6);
+      Scenes.items.left_bfs2_right.set(-500, 30).zIndex(6);
+      Scenes.items.left_bfs3_right.set(-500, 30).zIndex(6);
+
+      Scenes.items.left_beam1_left.set(-500, -85).zIndex(3);
+      Scenes.items.left_beam2_left.set(-500, -85).zIndex(3);
+      Scenes.items.left_beam1_right.set(-500, -85).zIndex(6);
+      Scenes.items.left_beam2_right.set(-500, -85).zIndex(6);
+
+      Scenes.items.left_sheathing_left.set(-500, -85).zIndex(6);
+      Scenes.items.left_sheathing_right.set(-500, -85).zIndex(3);
+
+      Scenes.items.right_bfs1_left.set(-500, -30).zIndex(2);
+      Scenes.items.right_bfs2_left.set(-500, -30).zIndex(2);
+      Scenes.items.right_bfs3_left.set(-500, -30).zIndex(2);
+      Scenes.items.right_bfs1_right.set(-500, 30).zIndex(9);
+      Scenes.items.right_bfs2_right.set(-500, 30).zIndex(9);
+      Scenes.items.right_bfs3_right.set(-500, 30).zIndex(9);
+
+      Scenes.items.right_beam1_left.set(-500, -85).zIndex(3);
+      Scenes.items.right_beam2_left.set(-500, -85).zIndex(3);
+      Scenes.items.right_beam1_right.set(-500, -85).zIndex(8);
+      Scenes.items.right_beam2_right.set(-500, -85).zIndex(8);
+
+      Scenes.items.right_sheathing_left.set(-500, -85).zIndex(6);
+      Scenes.items.right_sheathing_right.set(-500, -85).zIndex(7);
+
+      // content adder
+      Scenes.items.contentAdderBox.set(null, -50).show("flex").push();
+
+      Scenes.contentAdderAddBtn("BFS");
+      Scenes.contentAdderAddBtn("Timber Beam");
+      Scenes.contentAdderAddBtn("Sheathing");
+
+      let contentAdderBtns = getAll(".content-adder-box .btn");
+
+      let bfsCount = 0;
+      function bfsAnime() {
+        switch (bfsCount) {
+          case 0:
+            Dom.animePush(anime
+              .timeline({
+                easing: "easeInOutQuad",
+                duration: 2000,
+              })
+              .add({
+                targets: Scenes.items.left_bfs1_left.item,
+                keyframes: [{ left: -50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.left_bfs2_left.item,
+                keyframes: [{ left: -50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.left_bfs3_left.item,
+                keyframes: [{ left: -50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.left_bfs1_right.item,
+                keyframes: [{ left: 50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.left_bfs2_right.item,
+                keyframes: [{ left: 50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.left_bfs3_right.item,
+                keyframes: [{ left: 50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_bfs1_left.item,
+                keyframes: [{ left: -50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_bfs2_left.item,
+                keyframes: [{ left: -50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_bfs3_left.item,
+                keyframes: [{ left: -50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_bfs1_right.item,
+                keyframes: [{ left: 50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_bfs2_right.item,
+                keyframes: [{ left: 50 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_bfs3_right.item,
+                keyframes: [{ left: 50 }, { left: 0, top: 0 }],
+                complete() {
+                  setCC("Click on the 'Timber Beam' to attach it with bfs.");
+                  Scenes.showArrowForMenuItem();
+                },
+              }));
+            break;
+        }
+      }
+
+      let timberBeamCount = 0;
+      function timberBeamAnime() {
+        switch (timberBeamCount) {
+          case 0:
+            Dom.animePush(anime
+              .timeline({
+                easing: "easeInOutQuad",
+                duration: 2000,
+              })
+              .add({
+                targets: Scenes.items.left_beam1_left.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.left_beam2_left.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.left_beam1_right.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.left_beam2_right.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_beam1_left.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_beam2_left.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_beam1_right.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_beam2_right.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+                complete() {
+                  setCC("Click on the 'Sheathing' and attach with timber beam");
+                  Scenes.showArrowForMenuItem();
+                },
+              }));
+            break;
+        }
+        // timberBeamCount++
+      }
+
+      let sheathingCount = 0;
+      function sheathingAnime() {
+        switch (sheathingCount) {
+          case 0:
+            Dom.animePush(anime
+              .timeline({
+                easing: "easeInOutQuad",
+                duration: 2000,
+              })
+              .add({
+                targets: Scenes.items.left_sheathing_left.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.left_sheathing_right.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_sheathing_left.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+              })
+              .add({
+                targets: Scenes.items.right_sheathing_right.item,
+                keyframes: [{ left: 150 }, { left: 0, top: 0 }],
+                complete() {
+                  Quiz.loadQuiz();
+                  setIsProcessRunning(false);
+                },
+              }));
+            break;
+        }
+        // sheathingCount++
+      }
+      setCC("Click on the 'BFS' to attach beam forming support with timber beam.");
+      Scenes.showArrowForMenuItem();
+      //onclick
+      contentAdderBtns[0].onclick = bfsAnime;
+      contentAdderBtns[1].onclick = timberBeamAnime;
+      contentAdderBtns[2].onclick = sheathingAnime;
+
+      contentAdderBtns.forEach((cab) => {
+        let previousFunction = cab.onclick;
+        cab.onclick = () => {
+          Dom.setBlinkArrow(-1);
+          previousFunction();
+        };
+      });
+      // setCC("Click 'Next' to go to  next step");
+      //       Dom.setBlinkArrow(true, 790, 408).play();
+      //       setIsProcessRunning(false);
+      //       Dom.setBlinkArrow(true, 790, 408).play();
+      //       setIsProcessRunning(false);
+      // };
       return true;
     }),
     (step6 = function () {
-      setIsProcessRunning(true);
-
-      Scenes.setStepHeading(
-        "Step 6",
-        "Placing inner and outer beam with the help of beam forming support (BFS) with extension."
-      )
-
-
-    // todo Required Items
-    Scenes.items.left_base_plate1.set(0,0)
-    Scenes.items.left_base_plate2.set (0,0)
-    Scenes.items.left_base_plate3.set(0,0)
-    Scenes.items.left_base_plate4.set(0,0)  
-
-    Scenes.items.right_base_plate1.set(0,0)
-    Scenes.items.right_base_plate2.set(0,0)
-    Scenes.items.right_base_plate3.set(0,0)
-    Scenes.items.right_base_plate4.set(0,0)  
-    
-    Scenes.items.left_ct_prop1.set(0,0)
-    Scenes.items.left_ct_prop2.set(0,0)
-    Scenes.items.left_ct_prop3.set(0,0)
-    Scenes.items.left_ct_prop4.set(0,0)
-    Scenes.items.right_ct_prop1.set(0,0)
-    Scenes.items.right_ct_prop2.set(0,0)
-    Scenes.items.right_ct_prop3.set(0,0)
-    Scenes.items.right_ct_prop4.set(0,0)
-
-    Scenes.items.left_uhead1.set(0,0)
-    Scenes.items.left_uhead2.set(0,0)
-    Scenes.items.left_uhead3.set(0,0)
-    Scenes.items.left_uhead4.set(0,0)
-    Scenes.items.right_uhead1.set(0,0)
-    Scenes.items.right_uhead2.set(0,0)
-    Scenes.items.right_uhead3.set(0,0)
-    Scenes.items.right_uhead4.set(0,0)
-
-    Scenes.items.left_aluminium1.set(0,0).zIndex(1)
-    Scenes.items.left_aluminium2.set(0,0).zIndex(1)
-    Scenes.items.right_aluminium1.set(0,0).zIndex(1)
-    Scenes.items.right_aluminium2.set(0,0).zIndex(1)
-    
-    Scenes.items .left_beam1.set(0,0).zIndex(2)
-    Scenes.items .left_beam2.set(0,0).zIndex(2)
-    Scenes.items .left_beam3.set(0,0).zIndex(2)
-    Scenes.items .left_beam4.set(0,0).zIndex(2)
-    Scenes.items .left_beam5.set(0,0).zIndex(2)
-    Scenes.items .left_beam6.set(0,0).zIndex(2)
-    Scenes.items.right_beam1.set(0,0).zIndex(2)
-    Scenes.items.right_beam2.set(0,0).zIndex(2)
-    Scenes.items.right_beam3.set(0,0).zIndex(2)
-    Scenes.items.right_beam4.set(0,0).zIndex(2)
-    Scenes.items.right_beam5.set(0,0).zIndex(2)
-    Scenes.items.right_beam6.set(0,0).zIndex(2)
-
-    Scenes.items.hammer.set(790, 332,30).zIndex(7)
-
-    Scenes.items.left_sheathing1.set(0,0).zIndex(3) 
-    Scenes.items.left_sheathing1_nail_helper.set(0,0).zIndex(5)
-    Scenes.items.left_sheathing1_nail1.set(0,8).zIndex(4)
-    Scenes.items.left_sheathing1_nail2.set(0,8).zIndex(4)
-    Scenes.items.left_sheathing1_nail3.set(0,8).zIndex(4)
-    Scenes.items.left_sheathing1_nail4.set(0,8).zIndex(4)
-    
-    Scenes.items.right_sheathing1.set(0,0).zIndex(3)
-    Scenes.items.right_sheathing1_nail_helper.set(0,0).zIndex(5)
-    Scenes.items.right_sheathing1_nail1.set(0,8).zIndex(4)
-    Scenes.items.right_sheathing1_nail2.set(0,8).zIndex(4)
-    Scenes.items.right_sheathing1_nail3.set(0,8).zIndex(4)
-    Scenes.items.right_sheathing1_nail4.set(0,8).zIndex(4)
-  
-    Scenes.items.left_bracing1.set(0,0).zIndex(1) 
-    Scenes.items.left_bracing2.set(0,0).zIndex(1) 
-    Scenes.items.left_bracing3.set(0,0).zIndex(1) 
-    Scenes.items.left_bracing4.set(0,0) 
-    Scenes.items.left_bracing5.set(0,0).zIndex(1)
-    Scenes.items.left_bracing6.set(0,0).zIndex(1)
-    Scenes.items.left_bracing7.set(0,0)
-    Scenes.items.left_bracing8.set(0,0)
-    Scenes.items.left_bracing9.set(0,0)
-    Scenes.items.left_bracing10.set(0,0)
-
-    Scenes.items.right_bracing1.set(0,0).zIndex(1)
-    Scenes.items.right_bracing2.set(0,0).zIndex(1)
-    Scenes.items.right_bracing3.set(0,0).zIndex(1)
-    Scenes.items.right_bracing4.set(0,0)
-    Scenes.items.right_bracing5.set(0,0).zIndex(1)
-    Scenes.items.right_bracing6.set(0,0).zIndex(1)
-    Scenes.items.right_bracing7.set(0,0)
-    Scenes.items.right_bracing8.set(0,0)
-    Scenes.items.right_bracing9.set(0,0)
-    Scenes.items.right_bracing10.set(0,0)
-
-    Scenes.items.videoBox.set(710,140,null).show("flex")
-    Scenes.items.videoBoxSrc.set(0,null,200)
-    Scenes.items.videoBoxSrc.item.src = Scenes.items.bfs_video.item.src
-    Scenes.items.videoBoxTitle.setContent("BFS Installation")
-    Scenes.items.videoBoxRestartBtn.item.onclick = ()=>{
-      Scenes.items.videoBoxSrc.item.play()
-    }
-
-    // image Box
-    // Scenes.items.imageBox.show("flex").set(750,200)
-    // Scenes.items.imageBoxSrc.item.src = "./src/images/real_head_adapter.png"
-    // Scenes.items.imageBoxTitle.setContent("Head Adapter")
-
-    //! final position
-    Scenes.items.left_bfs1_left.set(-500,-30).zIndex(2)
-    Scenes.items.left_bfs2_left.set(-500,-30).zIndex(2)
-    Scenes.items.left_bfs3_left.set(-500,-30).zIndex(2)
-    Scenes.items.left_bfs1_right.set(-500,30).zIndex(6)
-    Scenes.items.left_bfs2_right.set(-500,30).zIndex(6)
-    Scenes.items.left_bfs3_right.set(-500,30).zIndex(6)
-
-    Scenes.items.left_beam1_left.set(-500,-85).zIndex(3)
-    Scenes.items.left_beam2_left.set(-500,-85).zIndex(3)
-    Scenes.items.left_beam1_right.set(-500,-85).zIndex(6)
-    Scenes.items.left_beam2_right.set(-500,-85).zIndex(6)
-
-    Scenes.items.left_sheathing_left.set(-500,-85).zIndex(6)
-    Scenes.items.left_sheathing_right.set(-500,-85).zIndex(3)
-
-
-    Scenes.items.right_bfs1_left.set(-500,-30).zIndex(2)
-    Scenes.items.right_bfs2_left.set(-500,-30).zIndex(2)
-    Scenes.items.right_bfs3_left.set(-500,-30).zIndex(2)
-    Scenes.items.right_bfs1_right.set(-500,30).zIndex(9)
-    Scenes.items.right_bfs2_right.set(-500,30).zIndex(9)
-    Scenes.items.right_bfs3_right.set(-500,30).zIndex(9)
-
-    Scenes.items.right_beam1_left.set(-500,-85).zIndex(3)
-    Scenes.items.right_beam2_left.set(-500,-85).zIndex(3)
-    Scenes.items.right_beam1_right.set(-500,-85).zIndex(8)
-    Scenes.items.right_beam2_right.set(-500,-85).zIndex(8)
-
-    Scenes.items.right_sheathing_left.set(-500,-85).zIndex(6)
-    Scenes.items.right_sheathing_right.set(-500,-85).zIndex(7)
-
-
-    
-    // content adder
-    Scenes.items.contentAdderBox.set(null, -50).show("flex").push()
-    
-    Scenes.contentAdderAddBtn("BFS")
-    Scenes.contentAdderAddBtn("Timber Beam")
-    Scenes.contentAdderAddBtn("Sheathing")
-
-    let contentAdderBtns = getAll(".content-adder-box .btn")
-    
-    let bfsCount = 0
-    function bfsAnime(){
-      switch(bfsCount){
-        case 0:
-          anime.timeline({
-            easing: "easeInOutQuad",
-            duration: 2000,
-            
-          })
-          .add({
-            targets: Scenes.items.left_bfs1_left.item,
-            keyframes: [
-              {left: -50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.left_bfs2_left.item,
-            keyframes: [
-              {left: -50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.left_bfs3_left.item,
-            keyframes: [
-              {left: -50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.left_bfs1_right.item,
-            keyframes: [
-              {left: 50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.left_bfs2_right.item,
-            keyframes: [
-              {left: 50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.left_bfs3_right.item,
-            keyframes: [
-              {left: 50},
-              {left: 0,top: 0}
-            ], 
-          })
-          .add({
-            targets: Scenes.items.right_bfs1_left.item,
-            keyframes: [
-              {left: -50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.right_bfs2_left.item,
-            keyframes: [
-              {left: -50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.right_bfs3_left.item,
-            keyframes: [
-              {left: -50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.right_bfs1_right.item,
-            keyframes: [
-              {left: 50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.right_bfs2_right.item,
-            keyframes: [
-              {left: 50},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.right_bfs3_right.item,
-            keyframes: [
-              {left: 50},
-              {left: 0,top: 0}
-            ],
-            complete(){
-              setCC("Click on the 'Timber Beam' to attach it with bfs.");      
-              Dom.setBlinkArrow(true, 705,15).play();
-            }  
-          })
-          break
-        
-        case 1:
-          anime.timeline({
-            easing: "easeInOutQuad",
-            duration: 2000,
-            
-          })
-          .add({
-            targets: Scenes.items.bfs_right1.item,
-            left : 0,
-            top: 0,
-          })
-          .add(
-            {
-            targets: Scenes.items.bfs_right2.item,
-            left : 0,
-            top: 0,
-          })
-          .add({
-            targets: Scenes.items.bfs_right3.item,
-            left : 0,
-            top: 0,
-            complete(){
-              setCC("Click on the 'Timber Beam' to attach it with bfs.");      
-              Dom.setBlinkArrow(true, 705,15).play();
-            }  
-          })
-          break
-      }
-      bfsCount++
-    }
-
-    let timberBeamCount = 0
-    function timberBeamAnime(){
-      switch(timberBeamCount){
-        case 0:
-          anime.timeline({
-            easing: "easeInOutQuad",
-            duration: 2000,
-          })
-          .add({
-            targets: Scenes.items.left_beam1_left.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ]
-          })
-          .add({
-            targets: Scenes.items.left_beam2_left.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ],
-          })     
-          .add({
-            targets: Scenes.items.left_beam1_right.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.left_beam2_right.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ],
-          })     
-          .add({
-            targets: Scenes.items.right_beam1_left.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ]
-          })
-          .add({
-            targets: Scenes.items.right_beam2_left.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ],
-          })     
-          .add({
-            targets: Scenes.items.right_beam1_right.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.right_beam2_right.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ],
-            complete(){
-              setCC("Click on the 'Sheathing' and attach with timber beam");      
-              Dom.setBlinkArrow(true, 705,65).play();
-            }  
-          }) 
-          break
-      }   
-      timberBeamCount++
-    }
-
-    let sheathingCount = 0
-    function sheathingAnime(){
-      switch(sheathingCount){
-        case 0:
-          anime.timeline({
-            easing: "easeInOutQuad",
-            duration: 2000,
-          })
-          .add({
-            targets: Scenes.items.left_sheathing_left.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ]
-          })
-          .add({
-            targets: Scenes.items.left_sheathing_right.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ],
-          })     
-          .add({
-            targets: Scenes.items.right_sheathing_left.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ],
-          })
-          .add({
-            targets: Scenes.items.right_sheathing_right.item,
-            keyframes: [
-              {left: 150},
-              {left: 0,top: 0}
-            ],
-            complete(){
-              Dom.setBlinkArrow(true, 790, 408).play();
-              setCC("Click 'Next' to go to next step");
-              setIsProcessRunning(false);
-              // Quiz.loadQuiz()
-            }  
-          }) 
-          break
-      }   
-      sheathingCount++
-       
-    }
-    setCC("Click on the 'BFS' to attach beam forming support with timber beam.")
-    Dom.setBlinkArrow(true,705,-35).play()
-    //onclick
-    contentAdderBtns[0].onclick = bfsAnime
-    contentAdderBtns[1].onclick = timberBeamAnime
-    contentAdderBtns[2].onclick = sheathingAnime
-
-    // setCC("Click 'Next' to go to  next step");
-    //       Dom.setBlinkArrow(true, 790, 408).play();
-    //       setIsProcessRunning(false);
-        //   anime({
-        //     duration: 1000,
-        //     complete(){
-        //       Quiz.loadQuiz()
-        //     }
-        //   });
-        // };
-      return true
-    }),
-    (step7 = function () {
-      Dom.hideAll(); 
+      Dom.hideAll();
       setIsProcessRunning(true);
       Scenes.items.contentAdderBox.setContent("");
-      Scenes.setStepHeading(
-        "Step 7",
-        "Making Slab using short prop, aluminum beam and timber beam."
-      );
+      Scenes.setStepHeading("Step 6", "Making Slab using short prop, aluminum beam and timber beam.");
 
-    // ! required item
-    Scenes.items.left_base_plate1.set(0,0)
-    Scenes.items.left_base_plate2.set (0,0)
-    Scenes.items.left_base_plate3.set(0,0)
-    Scenes.items.left_base_plate4.set(0,0)  
+      // ! required item
+      Scenes.items.left_base_plate1.set(0, 0);
+      Scenes.items.left_base_plate2.set(0, 0);
+      Scenes.items.left_base_plate3.set(0, 0);
+      Scenes.items.left_base_plate4.set(0, 0);
 
-    Scenes.items.right_base_plate1.set(0,0)
-    Scenes.items.right_base_plate2.set(0,0)
-    Scenes.items.right_base_plate3.set(0,0)
-    Scenes.items.right_base_plate4.set(0,0)  
-    
-    Scenes.items.left_ct_prop1.set(0,0)
-    Scenes.items.left_ct_prop2.set(0,0)
-    Scenes.items.left_ct_prop3.set(0,0)
-    Scenes.items.left_ct_prop4.set(0,0)
-    Scenes.items.right_ct_prop1.set(0,0)
-    Scenes.items.right_ct_prop2.set(0,0)
-    Scenes.items.right_ct_prop3.set(0,0)
-    Scenes.items.right_ct_prop4.set(0,0)
+      Scenes.items.right_base_plate1.set(0, 0);
+      Scenes.items.right_base_plate2.set(0, 0);
+      Scenes.items.right_base_plate3.set(0, 0);
+      Scenes.items.right_base_plate4.set(0, 0);
 
-    Scenes.items.left_uhead1.set(0,0)
-    Scenes.items.left_uhead2.set(0,0)
-    Scenes.items.left_uhead3.set(0,0)
-    Scenes.items.left_uhead4.set(0,0)
-    Scenes.items.right_uhead1.set(0,0)
-    Scenes.items.right_uhead2.set(0,0)
-    Scenes.items.right_uhead3.set(0,0)
-    Scenes.items.right_uhead4.set(0,0)
+      Scenes.items.left_ct_prop1.set(0, 0);
+      Scenes.items.left_ct_prop2.set(0, 0);
+      Scenes.items.left_ct_prop3.set(0, 0);
+      Scenes.items.left_ct_prop4.set(0, 0);
+      Scenes.items.right_ct_prop1.set(0, 0);
+      Scenes.items.right_ct_prop2.set(0, 0);
+      Scenes.items.right_ct_prop3.set(0, 0);
+      Scenes.items.right_ct_prop4.set(0, 0);
 
-    Scenes.items.left_aluminium1.set(0,0).zIndex(1)
-    Scenes.items.left_aluminium2.set(0,0).zIndex(1)
-    Scenes.items.right_aluminium1.set(0,0).zIndex(1)
-    Scenes.items.right_aluminium2.set(0,0).zIndex(1)
-    
-    Scenes.items .left_beam1.set(0,0).zIndex(2)
-    Scenes.items .left_beam2.set(0,0).zIndex(2)
-    Scenes.items .left_beam3.set(0,0).zIndex(2)
-    Scenes.items .left_beam4.set(0,0).zIndex(2)
-    Scenes.items .left_beam5.set(0,0).zIndex(2)
-    Scenes.items .left_beam6.set(0,0).zIndex(2)
-    Scenes.items.right_beam1.set(0,0).zIndex(2)
-    Scenes.items.right_beam2.set(0,0).zIndex(2)
-    Scenes.items.right_beam3.set(0,0).zIndex(2)
-    Scenes.items.right_beam4.set(0,0).zIndex(2)
-    Scenes.items.right_beam5.set(0,0).zIndex(2)
-    Scenes.items.right_beam6.set(0,0).zIndex(2)
+      Scenes.items.left_uhead1.set(0, 0);
+      Scenes.items.left_uhead2.set(0, 0);
+      Scenes.items.left_uhead3.set(0, 0);
+      Scenes.items.left_uhead4.set(0, 0);
+      Scenes.items.right_uhead1.set(0, 0);
+      Scenes.items.right_uhead2.set(0, 0);
+      Scenes.items.right_uhead3.set(0, 0);
+      Scenes.items.right_uhead4.set(0, 0);
 
-    Scenes.items.left_sheathing1.set(0,0).zIndex(3) 
-    Scenes.items.left_sheathing1_nail_helper.set(0,0).zIndex(5)
-    Scenes.items.left_sheathing1_nail1.set(0,8).zIndex(4)
-    Scenes.items.left_sheathing1_nail2.set(0,8).zIndex(4)
-    Scenes.items.left_sheathing1_nail3.set(0,8).zIndex(4)
-    Scenes.items.left_sheathing1_nail4.set(0,8).zIndex(4)
-    
-    Scenes.items.right_sheathing1.set(0,0).zIndex(3)
-    Scenes.items.right_sheathing1_nail_helper.set(0,0).zIndex(5)
-    Scenes.items.right_sheathing1_nail1.set(0,8).zIndex(4)
-    Scenes.items.right_sheathing1_nail2.set(0,8).zIndex(4)
-    Scenes.items.right_sheathing1_nail3.set(0,8).zIndex(4)
-    Scenes.items.right_sheathing1_nail4.set(0,8).zIndex(4)
-  
-    // image Box
-    // Scenes.items.imageBox.show("flex").set(750,200)
-    // Scenes.items.imageBoxSrc.item.src = "./src/images/real_head_adapter.png"
-    // Scenes.items.imageBoxTitle.setContent("Head Adapter")
+      Scenes.items.left_aluminium1.set(0, 0).zIndex(1);
+      Scenes.items.left_aluminium2.set(0, 0).zIndex(1);
+      Scenes.items.right_aluminium1.set(0, 0).zIndex(1);
+      Scenes.items.right_aluminium2.set(0, 0).zIndex(1);
 
-    Scenes.items.left_bfs1_left.set(0,0).zIndex(2)
-    Scenes.items.left_bfs2_left.set(0,0).zIndex(2)
-    Scenes.items.left_bfs3_left.set(0,0).zIndex(2)
-    Scenes.items.left_bfs1_right.set(0,0).zIndex(6)
-    Scenes.items.left_bfs2_right.set(0,0).zIndex(6)
-    Scenes.items.left_bfs3_right.set(0,0).zIndex(6)
+      Scenes.items.left_beam1.set(0, 0).zIndex(2);
+      Scenes.items.left_beam2.set(0, 0).zIndex(2);
+      Scenes.items.left_beam3.set(0, 0).zIndex(2);
+      Scenes.items.left_beam4.set(0, 0).zIndex(2);
+      Scenes.items.left_beam5.set(0, 0).zIndex(2);
+      Scenes.items.left_beam6.set(0, 0).zIndex(2);
+      Scenes.items.right_beam1.set(0, 0).zIndex(2);
+      Scenes.items.right_beam2.set(0, 0).zIndex(2);
+      Scenes.items.right_beam3.set(0, 0).zIndex(2);
+      Scenes.items.right_beam4.set(0, 0).zIndex(2);
+      Scenes.items.right_beam5.set(0, 0).zIndex(2);
+      Scenes.items.right_beam6.set(0, 0).zIndex(2);
 
-    Scenes.items.left_beam1_left.set(0,0).zIndex(3)
-    Scenes.items.left_beam2_left.set(0,0).zIndex(3)
-    Scenes.items.left_beam1_right.set(0,0).zIndex(6)
-    Scenes.items.left_beam2_right.set(0,0).zIndex(6)
+      Scenes.items.left_sheathing1.set(0, 0).zIndex(3);
+      Scenes.items.left_sheathing1_nail_helper.set(0, 0).zIndex(5);
+      Scenes.items.left_sheathing1_nail1.set(0, 8).zIndex(4);
+      Scenes.items.left_sheathing1_nail2.set(0, 8).zIndex(4);
+      Scenes.items.left_sheathing1_nail3.set(0, 8).zIndex(4);
+      Scenes.items.left_sheathing1_nail4.set(0, 8).zIndex(4);
 
-    Scenes.items.left_sheathing_left.set(0,0).zIndex(6)
-    Scenes.items.left_sheathing_right.set(0,0).zIndex(3)
+      Scenes.items.right_sheathing1.set(0, 0).zIndex(3);
+      Scenes.items.right_sheathing1_nail_helper.set(0, 0).zIndex(5);
+      Scenes.items.right_sheathing1_nail1.set(0, 8).zIndex(4);
+      Scenes.items.right_sheathing1_nail2.set(0, 8).zIndex(4);
+      Scenes.items.right_sheathing1_nail3.set(0, 8).zIndex(4);
+      Scenes.items.right_sheathing1_nail4.set(0, 8).zIndex(4);
 
+      // image Box
+      // Scenes.items.imageBox.show("flex").set(750,200)
+      // Scenes.items.imageBoxSrc.item.src = "./src/images/real_head_adapter.png"
+      // Scenes.items.imageBoxTitle.setContent("Head Adapter")
 
-    Scenes.items.right_bfs1_left.set(0,0).zIndex(2)
-    Scenes.items.right_bfs2_left.set(0,0).zIndex(2)
-    Scenes.items.right_bfs3_left.set(0,0).zIndex(2)
-    Scenes.items.right_bfs1_right.set(0,0).zIndex(9)
-    Scenes.items.right_bfs2_right.set(0,0).zIndex(9)
-    Scenes.items.right_bfs3_right.set(0,0).zIndex(9)
+      Scenes.items.left_bfs1_left.set(0, 0).zIndex(2);
+      Scenes.items.left_bfs2_left.set(0, 0).zIndex(2);
+      Scenes.items.left_bfs3_left.set(0, 0).zIndex(2);
+      Scenes.items.left_bfs1_right.set(0, 0).zIndex(6);
+      Scenes.items.left_bfs2_right.set(0, 0).zIndex(6);
+      Scenes.items.left_bfs3_right.set(0, 0).zIndex(6);
 
-    Scenes.items.right_beam1_left.set(0,0).zIndex(3)
-    Scenes.items.right_beam2_left.set(0,0).zIndex(3)
-    Scenes.items.right_beam1_right.set(0,0).zIndex(8)
-    Scenes.items.right_beam2_right.set(0,0).zIndex(8)
+      Scenes.items.left_beam1_left.set(0, 0).zIndex(3);
+      Scenes.items.left_beam2_left.set(0, 0).zIndex(3);
+      Scenes.items.left_beam1_right.set(0, 0).zIndex(6);
+      Scenes.items.left_beam2_right.set(0, 0).zIndex(6);
 
-    Scenes.items.right_sheathing_left.set(0,0).zIndex(6)
-    Scenes.items.right_sheathing_right.set(0,0).zIndex(7)
-    
-    Scenes.items.left_bracing1.set(0,0).zIndex(1) 
-    Scenes.items.left_bracing2.set(0,0).zIndex(1) 
-    Scenes.items.left_bracing3.set(0,0).zIndex(1) 
-    Scenes.items.left_bracing4.set(0,0) 
-    Scenes.items.left_bracing5.set(0,0).zIndex(1)
-    Scenes.items.left_bracing6.set(0,0).zIndex(1)
-    Scenes.items.left_bracing7.set(0,0)
-    Scenes.items.left_bracing8.set(0,0)
-    Scenes.items.left_bracing9.set(0,0)
-    Scenes.items.left_bracing10.set(0,0)
+      Scenes.items.left_sheathing_left.set(0, 0).zIndex(6);
+      Scenes.items.left_sheathing_right.set(0, 0).zIndex(3);
 
-    Scenes.items.right_bracing1.set(0,0).zIndex(1)
-    Scenes.items.right_bracing2.set(0,0).zIndex(1)
-    Scenes.items.right_bracing3.set(0,0).zIndex(1)
-    Scenes.items.right_bracing4.set(0,0)
-    Scenes.items.right_bracing5.set(0,0).zIndex(1)
-    Scenes.items.right_bracing6.set(0,0).zIndex(1)
-    Scenes.items.right_bracing7.set(0,0)
-    Scenes.items.right_bracing8.set(0,0)
-    Scenes.items.right_bracing9.set(0,0)
-    Scenes.items.right_bracing10.set(0,0) 
-    
-    //! final pos
-    Scenes.items.slab_short_prop1.set(-500,-30).zIndex(8)
-    Scenes.items.slab_short_prop2.set(-500,-30).zIndex(8)
-    Scenes.items.slab_short_prop3.set(-500,-30).zIndex(5)
-    Scenes.items.slab_short_prop4.set(-500,-30).zIndex(5)
+      Scenes.items.right_bfs1_left.set(0, 0).zIndex(2);
+      Scenes.items.right_bfs2_left.set(0, 0).zIndex(2);
+      Scenes.items.right_bfs3_left.set(0, 0).zIndex(2);
+      Scenes.items.right_bfs1_right.set(0, 0).zIndex(9);
+      Scenes.items.right_bfs2_right.set(0, 0).zIndex(9);
+      Scenes.items.right_bfs3_right.set(0, 0).zIndex(9);
 
-    Scenes.items.slab_uhead1.set(-500,-30).zIndex(8)
-    Scenes.items.slab_uhead2.set(-500,-30).zIndex(8)
-    Scenes.items.slab_uhead3.set(-500,-30).zIndex(8)
-    Scenes.items.slab_uhead4.set(-500,-30).zIndex(8)
-    
-    Scenes.items.slab_aluminium1.set(-500,-30).zIndex(9)
-    Scenes.items.slab_aluminium2.set(-500,-30).zIndex(9)
-    
-    Scenes.items.slab_beam1.set(-500,-30).zIndex(9)
-    Scenes.items.slab_beam2.set(-500,-30).zIndex(9)
-    Scenes.items.slab_beam3.set(-500,-30).zIndex(9)
-    Scenes.items.slab_beam4.set(-500,-30).zIndex(9)
-    Scenes.items.slab_beam5.set(-500,-30).zIndex(9)
+      Scenes.items.right_beam1_left.set(0, 0).zIndex(3);
+      Scenes.items.right_beam2_left.set(0, 0).zIndex(3);
+      Scenes.items.right_beam1_right.set(0, 0).zIndex(8);
+      Scenes.items.right_beam2_right.set(0, 0).zIndex(8);
 
-    Scenes.items.slab_sheathing1.set(-500,-30).zIndex(10)
+      Scenes.items.right_sheathing_left.set(0, 0).zIndex(6);
+      Scenes.items.right_sheathing_right.set(0, 0).zIndex(7);
 
+      Scenes.items.left_bracing1.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing2.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing3.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing4.set(0, 0);
+      Scenes.items.left_bracing5.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing6.set(0, 0).zIndex(1);
+      Scenes.items.left_bracing7.set(0, 0);
+      Scenes.items.left_bracing8.set(0, 0);
+      Scenes.items.left_bracing9.set(0, 0);
+      Scenes.items.left_bracing10.set(0, 0);
 
+      Scenes.items.right_bracing1.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing2.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing3.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing4.set(0, 0);
+      Scenes.items.right_bracing5.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing6.set(0, 0).zIndex(1);
+      Scenes.items.right_bracing7.set(0, 0);
+      Scenes.items.right_bracing8.set(0, 0);
+      Scenes.items.right_bracing9.set(0, 0);
+      Scenes.items.right_bracing10.set(0, 0);
 
+      //! final pos
+      Scenes.items.slab_short_prop1.set(-500, -30).zIndex(8);
+      Scenes.items.slab_short_prop2.set(-500, -30).zIndex(8);
+      Scenes.items.slab_short_prop3.set(-500, -30).zIndex(5);
+      Scenes.items.slab_short_prop4.set(-500, -30).zIndex(5);
 
-    // content adder
-    Scenes.items.contentAdderBox.set(null, -50).show("flex").push()
-    Scenes.contentAdderAddBtn("Short Prop")
-    Scenes.contentAdderAddBtn("U-Head")
-    Scenes.contentAdderAddBtn("Aluminium Beam")
-    Scenes.contentAdderAddBtn("Timber Beam")
-    Scenes.contentAdderAddBtn("Sheathing")
-    let contentAdderBtns = getAll(".content-adder-box .btn")
-      
-    function shortPropAnime(){
-      anime.timeline({
-        easing: "easeInOutQuad",
-        duration: 2000,
-      })
-      .add({  
-        targets: Scenes.items.slab_short_prop1.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.slab_short_prop2.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({  
-        targets: Scenes.items.slab_short_prop3.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.slab_short_prop4.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ],
-        complete(){
-          setCC("Click on the 'U-Head' to attach u-head with shot prop.")    
-          Dom.setBlinkArrow(true, 675,15).play()
-        }  
-      })
-    }
+      Scenes.items.slab_uhead1.set(-500, -30).zIndex(8);
+      Scenes.items.slab_uhead2.set(-500, -30).zIndex(8);
+      Scenes.items.slab_uhead3.set(-500, -30).zIndex(8);
+      Scenes.items.slab_uhead4.set(-500, -30).zIndex(8);
 
-    function uHeadAnime(){
-      anime.timeline({
-        easing: "easeInOutQuad",
-        duration: 2000,
-      })
-      .add({  
-        targets: Scenes.items.slab_uhead1.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.slab_uhead2.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({  
-        targets: Scenes.items.slab_uhead3.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.slab_uhead4.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ],
-        complete(){
-          setCC("Click on the 'Aluminium Beam' to add aluminium beam.")    
-          Dom.setBlinkArrow(true, 675,65).play()
-        }  
-      })
-    }
+      Scenes.items.slab_aluminium1.set(-500, -30).zIndex(9);
+      Scenes.items.slab_aluminium2.set(-500, -30).zIndex(9);
 
-    function aluminiumBeamAnime(){
-      anime.timeline({
-        easing: "easeInOutQuad",
-        duration: 2000,
-      })
-      .add({  
-        targets: Scenes.items.slab_aluminium1.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.slab_aluminium2.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ],
-        complete(){
-          setCC("Click on the 'Timber Beam' to add timber beam.")    
-          Dom.setBlinkArrow(true, 675,115).play()
-        }  
-      })
-    }
+      Scenes.items.slab_beam1.set(-500, -30).zIndex(9);
+      Scenes.items.slab_beam2.set(-500, -30).zIndex(9);
+      Scenes.items.slab_beam3.set(-500, -30).zIndex(9);
+      Scenes.items.slab_beam4.set(-500, -30).zIndex(9);
+      Scenes.items.slab_beam5.set(-500, -30).zIndex(9);
 
-    function timberBeamAnime(){
-      anime.timeline({
-        easing: "easeInOutQuad",
-        duration: 2000,
-      })
-      .add({
-        targets: Scenes.items.slab_beam1.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.slab_beam2.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.slab_beam3.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.slab_beam4.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ]   
-      })
-      .add({
-        targets: Scenes.items.slab_beam5.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ],
-        complete(){
-          setCC("Click on the 'Sheathing' to add sheathing on the top of timber beam.")    
-          Dom.setBlinkArrow(true, 675,165).play()
-        }   
-      })     
-    }
+      Scenes.items.slab_sheathing1.set(-500, -30).zIndex(10);
 
-    function sheathingAnime(){
-      anime.timeline({
-        easing: "easeInOutQuad",
-        duration: 2000,
-      })
-      .add({  
-        targets: Scenes.items.slab_sheathing1.item,
-        keyframes : [
-          {left : 0},
-          {top: 0},
-        ],
-        complete(){
-          Dom.setBlinkArrow(true, 790, 408).play();
-          setCC("Click 'Next' to go to next step");
-          setIsProcessRunning(false);
-          // Quiz.loadQuiz()
-        }  
-      })
-    }
-     
-     
-      Dom.setBlinkArrow(true, 675, -35).play();
+      // content adder
+      Scenes.items.contentAdderBox.set(null, -50).show("flex").push();
+      Scenes.contentAdderAddBtn("Short Prop");
+      Scenes.contentAdderAddBtn("U-Head");
+      Scenes.contentAdderAddBtn("Aluminium Beam");
+      Scenes.contentAdderAddBtn("Timber Beam");
+      Scenes.contentAdderAddBtn("Sheathing");
+      let contentAdderBtns = getAll(".content-adder-box .btn");
+
+      function shortPropAnime() {
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.slab_short_prop1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_short_prop2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_short_prop3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_short_prop4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              setCC("Click on the 'U-Head' to attach u-head with shot prop.");
+              Scenes.showArrowForMenuItem();
+            },
+          }));
+      }
+
+      function uHeadAnime() {
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.slab_uhead1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_uhead2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_uhead3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_uhead4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              setCC("Click on the 'Aluminium Beam' to add aluminium beam.");
+              Scenes.showArrowForMenuItem();
+            },
+          }));
+      }
+
+      function aluminiumBeamAnime() {
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.slab_aluminium1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_aluminium2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              setCC("Click on the 'Timber Beam' to add timber beam.");
+              Scenes.showArrowForMenuItem();
+            },
+          }));
+      }
+
+      function timberBeamAnime() {
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.slab_beam1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_beam2.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_beam3.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_beam4.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+          })
+          .add({
+            targets: Scenes.items.slab_beam5.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              setCC("Click on the 'Sheathing' to add sheathing on the top of timber beam.");
+              Scenes.showArrowForMenuItem();
+            },
+          }));
+      }
+
+      function sheathingAnime() {
+        Dom.animePush(anime
+          .timeline({
+            easing: "easeInOutQuad",
+            duration: 2000,
+          })
+          .add({
+            targets: Scenes.items.slab_sheathing1.item,
+            keyframes: [{ left: 0 }, { top: 0 }],
+            complete() {
+              setIsProcessRunning(false);
+            },
+          }));
+      }
+
+      Scenes.showArrowForMenuItem();
       setCC("Click on the 'Short Prop' and attach it with steel waler");
-     //onclick pipe waler 
-     i=0
-     contentAdderBtns[i++].onclick = shortPropAnime;
-     contentAdderBtns[i++].onclick = uHeadAnime;
-     contentAdderBtns[i++].onclick = aluminiumBeamAnime;
-     contentAdderBtns[i++].onclick = timberBeamAnime;
-     contentAdderBtns[i++].onclick = sheathingAnime;
+      //onclick pipe waler
+      i = 0;
+      contentAdderBtns[i++].onclick = shortPropAnime;
+      contentAdderBtns[i++].onclick = uHeadAnime;
+      contentAdderBtns[i++].onclick = aluminiumBeamAnime;
+      contentAdderBtns[i++].onclick = timberBeamAnime;
+      contentAdderBtns[i++].onclick = sheathingAnime;
 
-     return true;
+      contentAdderBtns.forEach((cab) => {
+        let previousFunction = cab.onclick;
+        cab.onclick = () => {
+          Dom.setBlinkArrow(-1);
+          previousFunction();
+        };
+      });
 
-    }), //f
+      return true;
+    }),
     (completed = function () {
       Dom.hideAll();
       Scenes.items.contentAdderBox.setContent("");
+
+      let certificateExpName = get(".certificate .student-detail .row span:nth-child(2)");
+      certificateExpName.innerHTML = Scenes.experimentNameCertificate;
 
       // get(".btn-save").style.display = "block";
       Scenes.items.btn_save.show().push();
@@ -3136,9 +2681,13 @@ right_bracing9 : new Dom("right_bracing9"),
 
       let nxtBtn = get(".btn-next");
       nxtBtn.innerHTML = "Restart";
-      nxtBtn.onclick = function () {
-        location.reload();
-      }
+      toggleNextBtn();
+      setTimeout(() => {
+        nxtBtn.onclick = function () {
+          location.reload();
+        };
+        toggleNextBtn();
+      }, 2000);
 
       return true;
     }),
@@ -3150,34 +2699,45 @@ right_bracing9 : new Dom("right_bracing9"),
     // }
     if (this.currentStep > 1) {
       Scenes.items.btn_next.setContent("Next");
-      Scenes.items.btn_next.item.onclick = ()=>{}
+      Scenes.items.btn_next.item.onclick = () => {};
       this.currentStep -= 2;
-      this.steps[this.currentStep]()
-      this.currentStep++
-      backDrawerItem()
-      backProgressBar()
+      // reset menu item for showArrow
+      this.menuItemNumber = 1;
+      this.steps[this.currentStep]();
+      this.currentStep++;
+      backDrawerItem();
+      backProgressBar();
+    }
+    if (this.currentStep > 1) {
+      get(".btn-back").style.visibility = "visible";
+    } else {
+      get(".btn-back").style.visibility = "hidden";
     }
   },
   next() {
     //! animation isRunning
     if (isRunning) {
-      return
+      return;
     }
     if (this.currentStep < this.steps.length) {
       if (this.steps[this.currentStep]()) {
         nextDrawerItem();
         nextProgressBar();
         this.currentStep++;
-      }         
+      }
     } else {
-      
+    }
+    if (this.currentStep > 1) {
+      get(".btn-back").style.visibility = "visible";
+    } else {
+      get(".btn-back").style.visibility = "hidden";
     }
   },
-}
+};
 
 // stepcalling
-Scenes.currentStep = 0
-Scenes.next()  
+Scenes.currentStep = 0;
+Scenes.next();
 // Scenes.steps[3]()
 // Scenes.next()
 // Scenes.next()
@@ -3193,6 +2753,13 @@ backBtn.addEventListener("click", () => {
 });
 
 // print certificate
+// ! Global click listener for content-adder buttons to prevent double-triggering
+get(".content-adder-box").addEventListener("click", (e) => {
+  if (e.target.closest(".content-adder")) {
+    Scenes.lockAllMenuItems();
+  }
+}, true); // capturing phase ensures this runs before the button's own onclick
+
 get(".btn-save").addEventListener("click", () => {
   window.print();
 });
@@ -3201,12 +2768,14 @@ let muteBtn = get(".btn-mute");
 muteBtn.addEventListener("click", () => {
   if (isMute) {
     isMute = false;
-    muteBtn.src = "./src/images/speech_off_btn.png";
-    muteBtn.title = "Click to Mute";
-  } else {
-    isMute = true;
     muteBtn.src = "./src/images/speech_on_btn.png";
+    muteBtn.title = "Click to Mute";
+    if (currentSpeechText) textToSpeach(currentSpeechText);
+  } else {
+    muteBtn.src = "./src/images/speech_off_btn.png";
     muteBtn.title = "Click to Unmute";
+    isMute = true;
+    window.speechSynthesis.cancel();
   }
 });
 
@@ -3219,15 +2788,3 @@ muteBtn.addEventListener("click", () => {
 
 // i really enjoyed the voice of keybord
 // its amazing
-
-// mouse position
-function getCursor(event) {
-  let x = event.clientX;
-  let y = event.clientY;
-  let _position = `X: ${x - 419}<br>Y: ${y - 169}`;
-
-  const infoElement = document.getElementById("info");
-  infoElement.innerHTML = _position;
-  infoElement.style.top = y + "px";
-  infoElement.style.left = x + 20 + "px";
-}
